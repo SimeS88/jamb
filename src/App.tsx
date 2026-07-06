@@ -47,14 +47,18 @@ export default function App() {
       .select('id')
       .eq('id', uid)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (!data) {
           const raw = session.user.user_metadata?.display_name
           const name =
             typeof raw === 'string' && raw.trim().length >= 2
               ? raw.trim().slice(0, 24)
               : (session.user.email ?? 'player').split('@')[0].slice(0, 24).padEnd(2, '_')
-          void supabase.from('jamb_profiles').upsert({ id: uid, display_name: name })
+          // note: supabase-js queries only run when awaited
+          const { error } = await supabase
+            .from('jamb_profiles')
+            .upsert({ id: uid, display_name: name })
+          if (error) console.error('profile creation failed:', error.message)
         }
       })
   }, [session])

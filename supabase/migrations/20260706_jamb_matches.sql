@@ -41,7 +41,20 @@ begin
   end if;
   select display_name into myname from public.jamb_profiles where id = me;
   if myname is null then
-    raise exception 'profile required';
+    -- self-heal: create the profile from auth metadata (the client-side
+    -- upsert can be missed, e.g. email confirmed in another browser)
+    select coalesce(
+             nullif(left(trim(u.raw_user_meta_data->>'display_name'), 24), ''),
+             left(split_part(u.email, '@', 1), 24),
+             'player')
+      into myname
+      from auth.users u where u.id = me;
+    if myname is null or char_length(myname) < 2 then
+      myname := coalesce(myname, 'p') || '_' || left(me::text, 4);
+    end if;
+    insert into public.jamb_profiles (id, display_name)
+      values (me, myname)
+      on conflict (id) do nothing;
   end if;
 
   -- already in a running match? resume it (also makes repeated calls idempotent)
