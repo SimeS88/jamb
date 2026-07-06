@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import AuthPanel from './components/AuthPanel'
-import Game, { type ThrowMode } from './components/Game'
+import type { ThrowMode } from './components/Game'
 import Leaderboard from './components/Leaderboard'
+import Menu from './components/Menu'
+import MultiGame from './components/MultiGame'
+import SinglePlayer from './components/SinglePlayer'
 import { supabase } from './lib/supabase'
 import { useI18n, type Lang } from './i18n'
+
+type Screen = 'menu' | 'single' | 'multi'
 
 function initialThrowMode(): ThrowMode {
   return localStorage.getItem('jamb.throwMode') === 'automatic' ? 'automatic' : 'manual'
@@ -15,6 +20,7 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [guest, setGuest] = useState(false)
+  const [screen, setScreen] = useState<Screen>('menu')
   const [throwMode, setThrowModeState] = useState<ThrowMode>(initialThrowMode)
   const [gameKey, setGameKey] = useState(0)
   const [lbKey, setLbKey] = useState(0)
@@ -58,23 +64,34 @@ export default function App() {
     localStorage.setItem('jamb.throwMode', m)
   }
 
-  async function handleGameEnd(score: number) {
-    if (!session) {
-      setBanner(`${t('gameOver')} ${t('finalScore')}: ${score}. ${t('scoreNotSaved')}`)
-      return
-    }
+  async function saveScore(score: number): Promise<boolean> {
+    if (!session) return false
     const { error } = await supabase.from('jamb_games').insert({
       user_id: session.user.id,
       score,
       dice_count: 6,
       throw_mode: throwMode,
     })
-    setBanner(
-      error
-        ? `${t('gameOver')} ${t('finalScore')}: ${score}. ${t('saveError')}`
-        : `${t('gameOver')} ${t('finalScore')}: ${score}. ${t('scoreSaved')}`,
-    )
     if (!error) setLbKey((k) => k + 1)
+    return !error
+  }
+
+  async function handleSingleEnd(score: number) {
+    if (!session) {
+      setBanner(`${t('gameOver')} ${t('finalScore')}: ${score}. ${t('scoreNotSaved')}`)
+      return
+    }
+    const ok = await saveScore(score)
+    setBanner(
+      `${t('gameOver')} ${t('finalScore')}: ${score}. ${ok ? t('scoreSaved') : t('saveError')}`,
+    )
+  }
+
+  function backToMenu() {
+    if (screen === 'single' && !banner && !window.confirm(t('confirmNewGame'))) return
+    setBanner(null)
+    setGameKey((k) => k + 1)
+    setScreen('menu')
   }
 
   if (!authReady) return <main className="app"><p>{t('loading')}</p></main>
@@ -89,6 +106,9 @@ export default function App() {
           <p className="subtitle">{t('subtitle')}</p>
         </div>
         <div className="settings">
+          {screen !== 'menu' && screen !== 'multi' && (
+            <button onClick={backToMenu}>← {t('backToMenu')}</button>
+          )}
           <label>
             {t('language')}
             <select value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
@@ -111,6 +131,7 @@ export default function App() {
               onClick={() => {
                 void supabase.auth.signOut()
                 setGuest(false)
+                setScreen('menu')
               }}
             >
               {t('signOut')}
@@ -130,7 +151,7 @@ export default function App() {
           >
             {t('newGame')}
           </button>
-          <button onClick={() => setBanner(null)}>{t('close')}</button>
+          <button onClick={backToMenu}>{t('backToMenu')}</button>
         </div>
       )}
 
@@ -139,9 +160,28 @@ export default function App() {
           <AuthPanel onGuest={() => setGuest(true)} />
           <Leaderboard refreshKey={lbKey} />
         </div>
-      ) : (
+      ) : screen === 'menu' ? (
+        <div className="lobby">
+          <div>
+            <Menu
+              signedIn={session !== null}
+              onSingle={() => {
+                setBanner(null)
+                setGameKey((k) => k + 1)
+                setScreen('single')
+              }}
+              onMulti={() => setScreen('multi')}
+            />
+            <details className="rules">
+              <summary>{t('rules')}</summary>
+              <p>{t('rulesText')}</p>
+            </details>
+          </div>
+          <Leaderboard refreshKey={lbKey} />
+        </div>
+      ) : screen === 'single' ? (
         <div className="play-area">
-          <Game key={gameKey} throwMode={throwMode} onGameEnd={handleGameEnd} />
+          <SinglePlayer key={gameKey} throwMode={throwMode} onGameEnd={handleSingleEnd} />
           <aside>
             <Leaderboard refreshKey={lbKey} />
             <details className="rules">
@@ -150,6 +190,16 @@ export default function App() {
             </details>
           </aside>
         </div>
+      ) : (
+        session && (
+          <MultiGame
+            key={gameKey}
+            session={session}
+            throwMode={throwMode}
+            onExit={backToMenu}
+            onFinished={(score) => void saveScore(score)}
+          />
+        )
       )}
     </main>
   )

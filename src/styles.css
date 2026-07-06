@@ -238,6 +238,107 @@ button.cell.announceable {
   text-align: left;
 }
 
+/* ---- menu ---- */
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.menu-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding: 1rem 1.2rem;
+  border-radius: 12px;
+}
+
+.menu-choice:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent-dark);
+}
+
+.menu-icon { font-size: 1.6rem; }
+
+/* ---- two players ---- */
+.multi { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem; }
+
+.multi-status {
+  margin-top: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.searching { font-size: 1.1rem; font-weight: 600; }
+
+.multi-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.player-chip {
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
+  font-weight: 600;
+}
+
+.player-chip.turn {
+  border-color: var(--green);
+  background: #e7f2ea;
+  color: var(--green);
+}
+
+.vs { font-size: 1.2rem; }
+.multi-header .leave { margin-left: auto; }
+
+.turn-indicator { margin: 0; font-weight: 600; color: var(--muted); }
+
+.multi-boards {
+  display: grid;
+  grid-template-columns: 1fr minmax(230px, 320px);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .multi-boards { grid-template-columns: 1fr; }
+}
+
+.opponent-board {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.8rem;
+}
+
+.opponent-board h3 { margin: 0 0 0.6rem; font-size: 0.95rem; color: var(--muted); }
+
+.sheet.compact { font-size: 0.72rem; }
+.sheet.compact th, .sheet.compact td { padding: 0.12rem 0.3rem; }
+.sheet.compact .col-symbol { font-size: 0.8rem; }
+
+.sheet td.forced {
+  background: #fff3cd;
+  outline: 2px dashed #d9a521;
+  outline-offset: -2px;
+}
+
+.sheet .coltotal { font-weight: 700; color: var(--ink); }
+
+/* ---- rules ---- */
 .rules {
   margin-top: 1rem;
   background: var(--panel);

@@ -1,16 +1,19 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { newDice, rollDie, rollFree, type Die } from '../game/dice'
-import {
-  COLS, ROWS, allowedRows, columnTotals, emptySheet,
-  grandTotal, isComplete, scoreFor, type ColId, type RowId, type Sheet,
-} from '../game/rules'
-import { useI18n, type TKey } from '../i18n'
+import { ROWS, allowedRows, scoreFor, type ColId, type RowId, type Sheet } from '../game/rules'
+import SheetTable from './SheetTable'
+import { useI18n } from '../i18n'
 
 export type ThrowMode = 'manual' | 'automatic'
 
 interface Props {
+  sheet: Sheet
   throwMode: ThrowMode
-  onGameEnd: (score: number) => void
+  /** whether this player may act right now (always true in single player until done) */
+  active: boolean
+  /** counter-announcement: the row this player is forced to play in the announce column */
+  forcedAnnounce?: RowId | null
+  onMove: (col: ColId, row: RowId, score: number) => void
 }
 
 const DICE_COUNT = 6
@@ -35,24 +38,31 @@ function DieFace({ die, disabled, onClick }: { die: Die; disabled: boolean; onCl
   )
 }
 
-export default function Game({ throwMode, onGameEnd }: Props) {
+export default function Game({ sheet, throwMode, active, forcedAnnounce = null, onMove }: Props) {
   const { t } = useI18n()
-  const [sheet, setSheet] = useState<Sheet>(emptySheet)
   const [dice, setDice] = useState<Die[]>(() => newDice(DICE_COUNT))
   const [rollsUsed, setRollsUsed] = useState(0)
   const [announced, setAnnounced] = useState<RowId | null>(null)
   const [rolling, setRolling] = useState(false)
-  const [finished, setFinished] = useState(false)
   const animTimer = useRef<number | null>(null)
 
   const values = dice.map((d) => d.value)
-  const canRoll = !finished && !rolling && rollsUsed < 3 && (announced === null || rollsUsed < 3)
-  const canAnnounce = !finished && !rolling && rollsUsed === 1 && announced === null
+  const canRoll = active && !rolling && rollsUsed < 3
+  const canAnnounce = active && !rolling && rollsUsed === 1 && announced === null && !forcedAnnounce
 
   useEffect(() => () => { if (animTimer.current) window.clearInterval(animTimer.current) }, [])
 
+  // A new turn begins whenever we become active: fresh dice, forced announcement applied.
+  useEffect(() => {
+    if (active) {
+      setDice(newDice(DICE_COUNT))
+      setRollsUsed(0)
+      setAnnounced(forcedAnnounce)
+    }
+  }, [active, forcedAnnounce])
+
   function doRoll(current: Die[], used: number) {
-    if (used >= 3 || rolling || finished) return
+    if (used >= 3 || rolling || !active) return
     setRolling(true)
     const final = rollFree(current)
     let ticks = 0
@@ -72,66 +82,40 @@ export default function Game({ throwMode, onGameEnd }: Props) {
 
   // Automatic mode: first roll of each turn happens by itself.
   useEffect(() => {
-    if (throwMode === 'automatic' && rollsUsed === 0 && !rolling && !finished) {
+    if (throwMode === 'automatic' && active && rollsUsed === 0 && !rolling) {
       const id = window.setTimeout(() => doRoll(dice, 0), 500)
       return () => window.clearTimeout(id)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [throwMode, rollsUsed, finished])
+  }, [throwMode, active, rollsUsed])
 
   function toggleHold(i: number) {
-    if (rollsUsed === 0 || rollsUsed >= 3 || rolling || finished) return
+    if (rollsUsed === 0 || rollsUsed >= 3 || rolling || !active) return
     setDice((prev) => prev.map((d, j) => (j === i ? { ...d, held: !d.held } : d)))
   }
 
   function scorableIn(col: ColId): RowId[] {
-    if (rollsUsed === 0 || rolling || finished) return []
-    if (announced !== null) return col === 'announce' ? [announced] : []
+    if (!active || rollsUsed === 0 || rolling) return []
+    if (announced !== null) {
+      return col === 'announce' && sheet.announce[announced] === undefined ? [announced] : []
+    }
     if (col === 'announce') return [] // must announce first
     return allowedRows(sheet, col)
   }
 
   function writeCell(col: ColId, row: RowId) {
     if (!scorableIn(col).includes(row)) return
-    const score = scoreFor(row, values, rollsUsed)
-    const next: Sheet = { ...sheet, [col]: { ...sheet[col], [row]: score } }
-    setSheet(next)
-    setAnnounced(null)
+    const score = scoreFor(row, values)
     setDice(newDice(DICE_COUNT))
     setRollsUsed(0)
-    if (isComplete(next)) {
-      setFinished(true)
-      onGameEnd(grandTotal(next))
-    }
+    setAnnounced(null)
+    onMove(col, row, score)
   }
 
   function announceRow(row: RowId) {
-    if (!canAnnounce) return
-    if (sheet.announce[row] !== undefined) return
+    if (!canAnnounce || sheet.announce[row] !== undefined) return
     setAnnounced(row)
   }
-
-  function reset() {
-    if (!finished && !window.confirm(t('confirmNewGame'))) return
-    setSheet(emptySheet())
-    setDice(newDice(DICE_COUNT))
-    setRollsUsed(0)
-    setAnnounced(null)
-    setFinished(false)
-  }
-
-  const rowLabel: Record<RowId, TKey> = {
-    ones: 'ones', twos: 'twos', threes: 'threes', fours: 'fours', fives: 'fives', sixes: 'sixes',
-    max: 'max', min: 'min', kenta: 'kenta', full: 'full', poker: 'poker', jamb: 'jamb',
-  }
-  const colLabel: Record<ColId, { label: TKey; hint: TKey; symbol: string }> = {
-    down: { label: 'down', hint: 'downHint', symbol: '⬇' },
-    up: { label: 'up', hint: 'upHint', symbol: '⬆' },
-    free: { label: 'free', hint: 'freeHint', symbol: '⬍' },
-    announce: { label: 'announce', hint: 'announceHint', symbol: '📣' },
-  }
-
-  const totals = COLS.map((c) => columnTotals(sheet[c]))
 
   return (
     <div className="game">
@@ -141,7 +125,7 @@ export default function Game({ throwMode, onGameEnd }: Props) {
             <DieFace
               key={i}
               die={d}
-              disabled={rollsUsed === 0 || rollsUsed >= 3 || rolling || finished}
+              disabled={rollsUsed === 0 || rollsUsed >= 3 || rolling || !active}
               onClick={() => toggleHold(i)}
             />
           ))}
@@ -150,84 +134,26 @@ export default function Game({ throwMode, onGameEnd }: Props) {
           <button className="primary" onClick={() => doRoll(dice, rollsUsed)} disabled={!canRoll}>
             {rolling ? t('rolling') : `${t('roll')} (${3 - rollsUsed})`}
           </button>
-          <button onClick={reset}>{t('newGame')}</button>
         </div>
-        {rollsUsed > 0 && rollsUsed < 3 && <p className="hint">{t('holdHint')}</p>}
+        {active && rollsUsed > 0 && rollsUsed < 3 && <p className="hint">{t('holdHint')}</p>}
         {canAnnounce && <p className="hint">{t('announcePick')}: {t('announceHint').toLowerCase()}</p>}
-        {announced && (
-          <p className="hint announced">📣 {t('announced')}: {t(rowLabel[announced])}</p>
+        {forcedAnnounce && active && (
+          <p className="hint announced">⚡ {t('counterForced')}: {t(forcedAnnounce)}</p>
+        )}
+        {announced && !forcedAnnounce && (
+          <p className="hint announced">📣 {t('announced')}: {t(announced)}</p>
         )}
       </div>
 
-      <table className="sheet">
-        <thead>
-          <tr>
-            <th></th>
-            {COLS.map((c) => (
-              <th key={c} title={t(colLabel[c].hint)}>
-                <span className="col-symbol">{colLabel[c].symbol}</span>
-                <span className="col-name">{t(colLabel[c].label)}</span>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {ROWS.map((row) => (
-            <Fragment key={row}>
-              <tr>
-                <th>{t(rowLabel[row])}</th>
-                {COLS.map((col) => {
-                  const val = sheet[col][row]
-                  const active = scorableIn(col).includes(row)
-                  const announceTarget = canAnnounce && col === 'announce' && sheet.announce[row] === undefined
-                  const preview = active ? scoreFor(row, values, rollsUsed) : null
-                  return (
-                    <td key={col}>
-                      {val !== undefined ? (
-                        <span className="filled">{val}</span>
-                      ) : active ? (
-                        <button className="cell playable" onClick={() => writeCell(col, row)}>
-                          {preview}
-                        </button>
-                      ) : announceTarget ? (
-                        <button className="cell announceable" onClick={() => announceRow(row)}>
-                          📣
-                        </button>
-                      ) : (
-                        <span className="cell blank" />
-                      )}
-                    </td>
-                  )
-                })}
-              </tr>
-              {row === 'sixes' && (
-                <tr className="subtotal">
-                  <th>{t('upperSum')} / {t('bonus')}</th>
-                  {totals.map((tt, i) => (
-                    <td key={i}>{tt.upper}{tt.bonus > 0 ? ` +${tt.bonus}` : ''}</td>
-                  ))}
-                </tr>
-              )}
-              {row === 'min' && (
-                <tr className="subtotal">
-                  <th>{t('middleSum')}</th>
-                  {totals.map((tt, i) => <td key={i}>{tt.middle}</td>)}
-                </tr>
-              )}
-              {row === 'jamb' && (
-                <tr className="subtotal">
-                  <th>{t('lowerSum')}</th>
-                  {totals.map((tt, i) => <td key={i}>{tt.lower}</td>)}
-                </tr>
-              )}
-            </Fragment>
-          ))}
-          <tr className="grand">
-            <th>{t('total')}</th>
-            <td colSpan={COLS.length}>{grandTotal(sheet)}</td>
-          </tr>
-        </tbody>
-      </table>
+      <SheetTable
+        sheet={sheet}
+        scorable={scorableIn}
+        preview={(row) => scoreFor(row, values)}
+        announceTargets={canAnnounce ? ROWS.filter((r) => sheet.announce[r] === undefined) : []}
+        forcedRow={active ? forcedAnnounce : null}
+        onCell={writeCell}
+        onAnnounce={announceRow}
+      />
     </div>
   )
 }

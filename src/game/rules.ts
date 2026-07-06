@@ -4,7 +4,7 @@
 export const ROWS = [
   'ones', 'twos', 'threes', 'fours', 'fives', 'sixes',
   'max', 'min',
-  'kenta', 'full', 'poker', 'jamb',
+  'tris', 'kenta', 'full', 'poker', 'jamb',
 ] as const
 export type RowId = (typeof ROWS)[number]
 
@@ -28,8 +28,8 @@ function counts(values: number[]): number[] {
   return c
 }
 
-/** Score a row given the 6 dice values and which roll (1-3) the player is on. */
-export function scoreFor(row: RowId, values: number[], rollsUsed: number): number {
+/** Score a row given the 6 dice values. */
+export function scoreFor(row: RowId, values: number[]): number {
   const c = counts(values)
   const numberValue = NUMBER_VALUE[row]
   if (numberValue !== undefined) {
@@ -41,11 +41,15 @@ export function scoreFor(row: RowId, values: number[], rollsUsed: number): numbe
       return sorted.slice(1).reduce((a, b) => a + b, 0) // 5 highest
     case 'min':
       return sorted.slice(0, 5).reduce((a, b) => a + b, 0) // 5 lowest
+    case 'tris': {
+      for (let v = 6; v >= 1; v--) if (c[v] >= 3) return 3 * v + 10
+      return 0
+    }
     case 'kenta': {
-      const small = [1, 2, 3, 4, 5].every((v) => c[v] > 0)
-      const large = [2, 3, 4, 5, 6].every((v) => c[v] > 0)
-      if (!small && !large) return 0
-      return rollsUsed === 1 ? 66 : rollsUsed === 2 ? 56 : 46
+      // large straight (2-6) beats small (1-5) when both are present
+      if ([2, 3, 4, 5, 6].every((v) => c[v] > 0)) return 45
+      if ([1, 2, 3, 4, 5].every((v) => c[v] > 0)) return 35
+      return 0
     }
     case 'full': {
       // Best three-of-a-kind + pair of a different value.
@@ -103,7 +107,8 @@ export function columnTotals(col: Partial<Record<RowId, number>>): ColumnTotals 
   const middleReady =
     col.max !== undefined && col.min !== undefined && col.ones !== undefined
   const middle = middleReady ? Math.max(0, (col.max! - col.min!)) * col.ones! : 0
-  const lower = (col.kenta ?? 0) + (col.full ?? 0) + (col.poker ?? 0) + (col.jamb ?? 0)
+  const lower =
+    (col.tris ?? 0) + (col.kenta ?? 0) + (col.full ?? 0) + (col.poker ?? 0) + (col.jamb ?? 0)
   return { upper: upperRaw, bonus, middle, lower, total: upperRaw + bonus + middle + lower }
 }
 
