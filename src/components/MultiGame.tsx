@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import Game, { type ThrowMode } from './Game'
 import SheetTable from './SheetTable'
-import { emptySheet, grandTotal, isComplete, type ColId, type RowId, type Sheet } from '../game/rules'
+import { MULTI_COLS, emptySheet, grandTotal, isComplete, type ColId, type RowId, type Sheet } from '../game/rules'
 import { supabase } from '../lib/supabase'
 import { useI18n } from '../i18n'
 
@@ -30,7 +30,15 @@ interface Props {
 }
 
 function normalizeSheet(s: Sheet | undefined): Sheet {
-  return s ? { down: { ...s.down }, up: { ...s.up }, free: { ...s.free }, announce: { ...s.announce } } : emptySheet()
+  return s
+    ? {
+        down: { ...s.down },
+        up: { ...s.up },
+        free: { ...s.free },
+        announce: { ...s.announce },
+        counter: { ...(s.counter ?? {}) },
+      }
+    : emptySheet()
 }
 
 export default function MultiGame({ session, throwMode, onExit, onFinished }: Props) {
@@ -112,17 +120,17 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
   const myTurn = match.status === 'active' && match.turn === me
   const last = match.state.lastMove
   const forcedAnnounce: RowId | null =
-    myTurn && last && last.by === opp && last.col === 'announce' && mySheet.announce[last.row] === undefined
+    myTurn && last && last.by === opp && last.col === 'announce' && mySheet.counter[last.row] === undefined
       ? last.row
       : null
 
   async function play(col: ColId, row: RowId, score: number) {
     if (!match || !myTurn) return
     const nextMine: Sheet = { ...mySheet, [col]: { ...mySheet[col], [row]: score } }
-    const iAmDone = isComplete(nextMine)
-    const bothDone = iAmDone && isComplete(oppSheet)
-    const myTotal = grandTotal(nextMine)
-    const oppTotal = grandTotal(oppSheet)
+    const iAmDone = isComplete(nextMine, MULTI_COLS)
+    const bothDone = iAmDone && isComplete(oppSheet, MULTI_COLS)
+    const myTotal = grandTotal(nextMine, MULTI_COLS)
+    const oppTotal = grandTotal(oppSheet, MULTI_COLS)
     const update = {
       state: {
         ...match.state,
@@ -194,6 +202,7 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
         <div>
           <Game
             sheet={mySheet}
+            cols={MULTI_COLS}
             throwMode={throwMode}
             active={myTurn && !finished && !abandoned}
             forcedAnnounce={forcedAnnounce}
@@ -202,7 +211,7 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
         </div>
         <div className="opponent-board">
           <h3>{names[opp] ?? t('opponent')}</h3>
-          <SheetTable sheet={oppSheet} compact />
+          <SheetTable sheet={oppSheet} cols={MULTI_COLS} compact />
         </div>
       </div>
     </div>

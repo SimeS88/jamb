@@ -8,10 +8,11 @@ export type ThrowMode = 'manual' | 'automatic'
 
 interface Props {
   sheet: Sheet
+  cols: readonly ColId[]
   throwMode: ThrowMode
   /** whether this player may act right now (always true in single player until done) */
   active: boolean
-  /** counter-announcement: the row this player is forced to play in the announce column */
+  /** counter-announcement: the row this player is forced to play in the counter column */
   forcedAnnounce?: RowId | null
   onMove: (col: ColId, row: RowId, score: number) => void
 }
@@ -38,7 +39,7 @@ function DieFace({ die, disabled, onClick }: { die: Die; disabled: boolean; onCl
   )
 }
 
-export default function Game({ sheet, throwMode, active, forcedAnnounce = null, onMove }: Props) {
+export default function Game({ sheet, cols, throwMode, active, forcedAnnounce = null, onMove }: Props) {
   const { t } = useI18n()
   const [dice, setDice] = useState<Die[]>(() => newDice(DICE_COUNT))
   const [rollsUsed, setRollsUsed] = useState(0)
@@ -49,6 +50,10 @@ export default function Game({ sheet, throwMode, active, forcedAnnounce = null, 
   const values = dice.map((d) => d.value)
   const canRoll = active && !rolling && rollsUsed < 3
   const canAnnounce = active && !rolling && rollsUsed === 1 && announced === null && !forcedAnnounce
+  // Is any cell playable in the self-directed columns this turn?
+  const ordinaryLegal = (['down', 'up', 'free'] as ColId[]).some(
+    (c) => allowedRows(sheet, c).length > 0,
+  )
 
   useEffect(() => () => { if (animTimer.current) window.clearInterval(animTimer.current) }, [])
 
@@ -95,12 +100,30 @@ export default function Game({ sheet, throwMode, active, forcedAnnounce = null, 
   }
 
   function scorableIn(col: ColId): RowId[] {
-    if (!active || rollsUsed === 0 || rolling) return []
+    if (!cols.includes(col) || !active || rollsUsed === 0 || rolling) return []
+    // Counter-announcement in force: the counter cell is the only legal move.
+    if (forcedAnnounce !== null) {
+      return col === 'counter' && sheet.counter[forcedAnnounce] === undefined
+        ? [forcedAnnounce]
+        : []
+    }
     if (announced !== null) {
       return col === 'announce' && sheet.announce[announced] === undefined ? [announced] : []
     }
-    if (col === 'announce') return [] // must announce first
-    return allowedRows(sheet, col)
+    switch (col) {
+      case 'announce':
+        // normally needs an announcement; playable directly only in the
+        // endgame when down/up/free are complete (so the game can't stall)
+        return ordinaryLegal ? [] : allowedRows(sheet, 'announce')
+      case 'counter':
+        // only fillable when forced, except in the endgame when nothing
+        // else is left to play
+        return ordinaryLegal || allowedRows(sheet, 'announce').length > 0
+          ? []
+          : allowedRows(sheet, 'counter')
+      default:
+        return allowedRows(sheet, col)
+    }
   }
 
   function writeCell(col: ColId, row: RowId) {
@@ -147,6 +170,7 @@ export default function Game({ sheet, throwMode, active, forcedAnnounce = null, 
 
       <SheetTable
         sheet={sheet}
+        cols={cols}
         scorable={scorableIn}
         preview={(row) => scoreFor(row, values)}
         announceTargets={canAnnounce ? ROWS.filter((r) => sheet.announce[r] === undefined) : []}

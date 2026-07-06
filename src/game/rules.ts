@@ -8,8 +8,12 @@ export const ROWS = [
 ] as const
 export type RowId = (typeof ROWS)[number]
 
-export const COLS = ['down', 'up', 'free', 'announce'] as const
+export const COLS = ['down', 'up', 'free', 'announce', 'counter'] as const
 export type ColId = (typeof COLS)[number]
+
+/** Single player has no opponent to attack, so no counter-announce column. */
+export const SINGLE_COLS: readonly ColId[] = ['down', 'up', 'free', 'announce']
+export const MULTI_COLS: readonly ColId[] = COLS
 
 export type Sheet = Record<ColId, Partial<Record<RowId, number>>>
 
@@ -19,7 +23,7 @@ const NUMBER_VALUE: Partial<Record<RowId, number>> = {
 }
 
 export function emptySheet(): Sheet {
-  return { down: {}, up: {}, free: {}, announce: {} }
+  return { down: {}, up: {}, free: {}, announce: {}, counter: {} }
 }
 
 function counts(values: number[]): number[] {
@@ -88,6 +92,7 @@ export function allowedRows(sheet: Sheet, col: ColId): RowId[] {
       return [empty[empty.length - 1]]
     case 'free':
     case 'announce':
+    case 'counter':
       return empty
   }
 }
@@ -112,10 +117,10 @@ export function columnTotals(col: Partial<Record<RowId, number>>): ColumnTotals 
   return { upper: upperRaw, bonus, middle, lower, total: upperRaw + bonus + middle + lower }
 }
 
-export function grandTotal(sheet: Sheet): number {
-  return COLS.reduce((sum, c) => sum + columnTotals(sheet[c]).total, 0)
+export function grandTotal(sheet: Sheet, cols: readonly ColId[] = COLS): number {
+  return cols.reduce((sum, c) => sum + columnTotals(sheet[c]).total, 0)
 }
 
-export function isComplete(sheet: Sheet): boolean {
-  return COLS.every((c) => ROWS.every((r) => sheet[c][r] !== undefined))
+export function isComplete(sheet: Sheet, cols: readonly ColId[] = COLS): boolean {
+  return cols.every((c) => ROWS.every((r) => sheet[c][r] !== undefined))
 }
