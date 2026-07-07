@@ -92,6 +92,7 @@ const dict = {
     opponentLeft: 'Protivnik je napustio igru.',
     leaveMatch: 'Napusti igru',
     confirmLeave: 'Napustiti igru? Protivnik će dobiti pobjedu.',
+    syncProblem: 'Problem s vezom — pokušavam ponovno. Ako potraje, osvježi stranicu.',
   },
   en: {
     title: 'Jamb',
@@ -182,6 +183,7 @@ const dict = {
     opponentLeft: 'Your opponent left the game.',
     leaveMatch: 'Leave game',
     confirmLeave: 'Leave the game? Your opponent will win.',
+    syncProblem: 'Connection problem — retrying. If it persists, refresh the page.',
   },
 } as const
 

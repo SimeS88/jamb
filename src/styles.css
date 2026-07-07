@@ -100,6 +100,8 @@ button.primary:hover:not(:disabled) { background: var(--accent-dark); }
 
 .banner span { flex: 1; font-weight: 600; }
 
+.banner.warn { background: #b8860b; }
+
 .lobby, .play-area {
   display: grid;
   gap: 1.5rem;
