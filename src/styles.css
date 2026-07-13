@@ -340,6 +340,89 @@ button.cell.announceable {
 
 .sheet .coltotal { font-weight: 700; color: var(--ink); }
 
+/* ---- 2p lobby ---- */
+.lobby-2p { display: flex; flex-direction: column; gap: 1rem; }
+.lobby-title { margin: 0; font-size: 1.2rem; }
+.lobby-actions { display: flex; gap: 0.8rem; }
+
+.challenge-banner { background: var(--accent); }
+
+.player-list {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+}
+
+.player-list h3 { margin: 0 0 0.6rem; font-size: 1rem; }
+.player-list ul { list-style: none; margin: 0; padding: 0; }
+.player-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.player-list li:last-child { border-bottom: none; }
+.player-name { font-weight: 600; flex: 1; }
+.presence { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.presence.on { background: #2c9e5f; box-shadow: 0 0 4px #2c9e5f; }
+.presence.off { background: #c2bcae; }
+.presence-label { font-size: 0.78rem; color: var(--muted); min-width: 3.2rem; }
+
+/* ---- stats ---- */
+.stats-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  margin-top: 1rem;
+  font-size: 0.88rem;
+}
+
+.stats-panel h2 { margin-top: 0; font-size: 1.1rem; }
+.stats-panel h3 { font-size: 0.92rem; margin: 1rem 0 0.4rem; color: var(--muted); }
+.stats-panel table { width: 100%; border-collapse: collapse; }
+.stats-panel th, .stats-panel td {
+  padding: 0.25rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.scorecard { display: flex; gap: 0.7rem; }
+.stat {
+  flex: 1;
+  text-align: center;
+  border-radius: 10px;
+  padding: 0.5rem 0.3rem;
+  border: 1px solid var(--line);
+}
+.stat strong { display: block; font-size: 1.4rem; }
+.stat span { font-size: 0.75rem; color: var(--muted); }
+.stat.win { background: #e7f2ea; border-color: var(--green); }
+.stat.win strong { color: var(--green); }
+.stat.loss { background: #fdf1f1; border-color: var(--accent); }
+.stat.loss strong { color: var(--accent); }
+
+.history { list-style: none; margin: 0; padding: 0; }
+.history li {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.history li:last-child { border-bottom: none; }
+.history-date { color: var(--muted); font-size: 0.78rem; min-width: 5.2rem; }
+.history-opp { flex: 1; font-weight: 600; }
+.history-score { font-variant-numeric: tabular-nums; }
+.history-result { font-size: 0.78rem; font-weight: 700; min-width: 4.5rem; text-align: right; }
+.history li.win .history-result { color: var(--green); }
+.history li.loss .history-result { color: var(--accent); }
+
+.win-cell { color: var(--green); font-weight: 600; }
+.loss-cell { color: var(--accent); font-weight: 600; }
+
 /* ---- rules ---- */
 .rules {
   margin-top: 1rem;

@@ -6,6 +6,7 @@ import Leaderboard from './components/Leaderboard'
 import Menu from './components/Menu'
 import MultiGame from './components/MultiGame'
 import SinglePlayer from './components/SinglePlayer'
+import StatsPanel from './components/StatsPanel'
 import { supabase } from './lib/supabase'
 import { useI18n, type Lang } from './i18n'
 
@@ -181,7 +182,10 @@ export default function App() {
               <p>{t('rulesText')}</p>
             </details>
           </div>
-          <Leaderboard refreshKey={lbKey} />
+          <div>
+            <Leaderboard refreshKey={lbKey} />
+            {session && <StatsPanel refreshKey={lbKey} />}
+          </div>
         </div>
       ) : screen === 'single' ? (
         <div className="play-area">

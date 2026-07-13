@@ -6,6 +6,8 @@ interface Row {
   display_name: string
   best_score: number
   games_played: number
+  wins: number
+  losses: number
 }
 
 export default function Leaderboard({ refreshKey }: { refreshKey: number }) {
@@ -39,6 +41,8 @@ export default function Leaderboard({ refreshKey }: { refreshKey: number }) {
               <th>{t('player')}</th>
               <th>{t('bestScore')}</th>
               <th>{t('gamesPlayed')}</th>
+              <th title={t('wins')}>W</th>
+              <th title={t('losses')}>L</th>
             </tr>
           </thead>
           <tbody>
@@ -48,6 +52,8 @@ export default function Leaderboard({ refreshKey }: { refreshKey: number }) {
                 <td>{r.display_name}</td>
                 <td>{r.best_score}</td>
                 <td>{r.games_played}</td>
+                <td className="win-cell">{r.wins}</td>
+                <td className="loss-cell">{r.losses}</td>
               </tr>
             ))}
           </tbody>

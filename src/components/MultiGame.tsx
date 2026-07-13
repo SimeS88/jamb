@@ -1,31 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import Game, { type ThrowMode } from './Game'
+import Lobby from './Lobby'
 import SheetTable from './SheetTable'
-import { MULTI_COLS, emptySheet, grandTotal, isComplete, type ColId, type RowId, type Sheet } from '../game/rules'
+import { MULTI_COLS, grandTotal, isComplete, type ColId, type RowId } from '../game/rules'
+import { asRow, normalizeSheet, type MatchRow } from '../game/match'
 import { supabase } from '../lib/supabase'
 import { useI18n } from '../i18n'
-
-interface MatchState {
-  names?: Record<string, string>
-  sheets?: Record<string, Sheet>
-  lastMove?: { by: string; col: ColId; row: RowId } | null
-}
-
-interface MatchRow {
-  id: string
-  player1: string
-  player2: string | null
-  status: 'waiting' | 'active' | 'finished' | 'abandoned'
-  turn: string | null
-  winner: string | null
-  state: MatchState
-  updated_at: string
-}
-
-function asRow(data: unknown): MatchRow {
-  return (Array.isArray(data) ? data[0] : data) as MatchRow
-}
 
 interface Props {
   session: Session
@@ -34,22 +15,12 @@ interface Props {
   onFinished: (score: number) => void
 }
 
-function normalizeSheet(s: Sheet | undefined): Sheet {
-  return s
-    ? {
-        down: { ...s.down },
-        up: { ...s.up },
-        free: { ...s.free },
-        announce: { ...s.announce },
-        counter: { ...(s.counter ?? {}) },
-      }
-    : emptySheet()
-}
-
 export default function MultiGame({ session, throwMode, onExit, onFinished }: Props) {
   const { t } = useI18n()
   const me = session.user.id
+  const [booting, setBooting] = useState(true)
   const [match, setMatch] = useState<MatchRow | null>(null)
+  const [online, setOnline] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [syncTrouble, setSyncTrouble] = useState(false)
   const savedRef = useRef(false)
@@ -60,22 +31,46 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
     setMatch((prev) => (prev && prev.id === row.id && prev.updated_at > row.updated_at ? prev : row))
   }, [])
 
-  // Pair up (or resume a running/waiting match).
+  // Resume a running match if there is one; otherwise show the lobby.
   useEffect(() => {
     let cancelled = false
-    supabase.rpc('jamb_find_match').then(({ data, error }) => {
-      if (cancelled) return
-      if (error) setError(error.message)
-      else setMatch(asRow(data))
-    })
+    supabase
+      .from('jamb_matches')
+      .select('*')
+      .eq('status', 'active')
+      .or(`player1.eq.${me},player2.eq.${me}`)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) setError(error.message)
+        else if (data && data.length > 0) setMatch(data[0] as MatchRow)
+        setBooting(false)
+      })
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [me])
 
-  // Live updates + a self-healing polling fallback. A silent failure here is
-  // what makes a match look stuck, so errors trigger a session refresh and,
-  // if they persist, a visible notice.
+  // Presence: announce ourselves while in the two-player area and track
+  // who else is here (drives the online badges in the lobby).
+  useEffect(() => {
+    const channel = supabase.channel('jamb-presence', { config: { presence: { key: me } } })
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        setOnline(new Set(Object.keys(channel.presenceState())))
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') void channel.track({ at: Date.now() })
+      })
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [me])
+
+  // Live match updates + a self-healing polling fallback. A silent failure
+  // here is what makes a match look stuck, so errors trigger a session
+  // refresh and, if they persist, a visible notice.
   const matchId = match?.id
   useEffect(() => {
     if (!matchId) return
@@ -88,7 +83,6 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
       if (error || !data) {
         failsRef.current += 1
         if (failsRef.current >= 2) setSyncTrouble(true)
-        // stale/expired token is the usual culprit — force a refresh
         await supabase.auth.refreshSession()
         return
       }
@@ -104,8 +98,6 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
         (payload) => applyRow(payload.new as MatchRow),
       )
       .subscribe((status) => {
-        // catch anything that happened between the initial fetch and the
-        // subscription becoming live
         if (status === 'SUBSCRIBED') void refresh()
       })
     const poll = window.setInterval(() => void refresh(), 5000)
@@ -128,7 +120,19 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
       </div>
     )
   }
-  if (!match) return <div className="multi-status"><p>{t('loading')}</p></div>
+  if (booting) return <div className="multi-status"><p>{t('loading')}</p></div>
+
+  if (!match) {
+    return (
+      <div className="multi">
+        <div className="multi-header">
+          <h2 className="lobby-title">⚔️ {t('twoPlayers')}</h2>
+          <button className="leave" onClick={onExit}>{t('backToMenu')}</button>
+        </div>
+        <Lobby session={session} online={online} onMatch={(m) => { savedRef.current = false; setMatch(m) }} />
+      </div>
+    )
+  }
 
   if (match.status === 'waiting') {
     return (
@@ -141,11 +145,20 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
               .update({ status: 'abandoned' })
               .eq('id', match.id)
               .eq('status', 'waiting')
-            onExit()
+            setMatch(null)
           }}
         >
           {t('cancelSearch')}
         </button>
+      </div>
+    )
+  }
+
+  if (match.status === 'declined') {
+    return (
+      <div className="multi-status">
+        <p>{t('challengeDeclined')}</p>
+        <button onClick={() => setMatch(null)}>{t('backToMenu')}</button>
       </div>
     )
   }
@@ -196,7 +209,7 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
         .eq('id', match.id)
         .eq('status', 'active')
     }
-    onExit()
+    setMatch(null) // back to the lobby
   }
 
   const finished = match.status === 'finished'
