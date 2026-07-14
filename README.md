@@ -9,7 +9,7 @@ Jamb (Yamb) dice game with **6 dice**, in **Croatian and English**, with **manua
 - Columns: **Down** (top to bottom), **Up** (bottom to top), **Free** (any order), **Announce** (row must be announced right after the first roll). Two-player games add a fifth column, **Counter-announce**: an announcement is an attack — the opponent's next move must be the same field in their own counter-announce column.
 - Number section bonus: +30 when the 1–6 sum is 60 or more.
 - Middle section: (Max − Min) × number of ones.
-- Straight (kenta) scores 66/56/46 for 1st/2nd/3rd roll; Full +30, Poker +40, Jamb +50.
+- Three of a kind (tris) = 3 × value + 10; straight (skala) scores 35 for 1–5 or 45 for 2–6; Full +30, Poker +40, Jamb +50.
 
 ## Development
 

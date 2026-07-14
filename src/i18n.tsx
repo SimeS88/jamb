@@ -52,7 +52,7 @@ const dict = {
     max: 'Najviše',
     min: 'Najmanje',
     tris: 'Tris',
-    kenta: 'Kenta',
+    kenta: 'Skala',
     full: 'Ful',
     poker: 'Poker',
     jamb: 'Jamb',
@@ -72,7 +72,7 @@ const dict = {
     close: 'Zatvori',
     rules: 'Pravila',
     rulesText:
-      'Igra se sa 6 kockica, u svakom polju boduje se najviše 5. U svakom potezu imaš do 3 bacanja; kockice koje zadržiš se ne bacaju ponovno. Stupci: Dolje (odozgo), Gore (odozdo), Slobodno (bilo koji red) i Najava (red moraš najaviti odmah nakon prvog bacanja). Bonus +30 ako je zbroj brojeva ≥ 60. Tris = tri iste (3 × broj + 10). Kenta vrijedi 35 (1–5) ili 45 (2–6). U igri s dva igrača postoji peti stupac — protunajava: najava je napad, a protivnik u sljedećem potezu mora odigrati isto polje u svom stupcu protunajave.',
+      'Igra se sa 6 kockica, u svakom polju boduje se najviše 5. U svakom potezu imaš do 3 bacanja; kockice koje zadržiš se ne bacaju ponovno. Stupci: Dolje (odozgo), Gore (odozdo), Slobodno (bilo koji red) i Najava (red moraš najaviti odmah nakon prvog bacanja). Bonus +30 ako je zbroj brojeva ≥ 60. Tris = tri iste (3 × broj + 10). Skala vrijedi 35 (1–5) ili 45 (2–6). U igri s dva igrača postoji peti stupac — protunajava: najava je napad, a protivnik u sljedećem potezu mora odigrati isto polje u svom stupcu protunajave.',
     loading: 'Učitavanje…',
     menu: 'Izbornik',
     singleGame: 'Jedan igrač',
