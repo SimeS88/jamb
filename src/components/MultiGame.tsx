@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
-import Game, { type ThrowMode } from './Game'
+import type { RealtimeChannel, Session } from '@supabase/supabase-js'
+import Game, { type ThrowMode, type TurnSnapshot } from './Game'
 import Lobby from './Lobby'
+import MiniDice from './MiniDice'
 import SheetTable from './SheetTable'
 import { MULTI_COLS, grandTotal, isComplete, type ColId, type RowId } from '../game/rules'
 import { asRow, normalizeSheet, type MatchRow } from '../game/match'
@@ -23,8 +24,10 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
   const [online, setOnline] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [syncTrouble, setSyncTrouble] = useState(false)
+  const [oppLive, setOppLive] = useState<TurnSnapshot | null>(null)
   const savedRef = useRef(false)
   const failsRef = useRef(0)
+  const channelRef = useRef<RealtimeChannel | null>(null)
 
   // Never let a stale fetch overwrite newer state.
   const applyRow = useCallback((row: MatchRow) => {
@@ -97,20 +100,32 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
         { event: 'UPDATE', schema: 'public', table: 'jamb_matches', filter: `id=eq.${matchId}` },
         (payload) => applyRow(payload.new as MatchRow),
       )
+      .on('broadcast', { event: 'dice' }, ({ payload }) => {
+        // live mirror of the opponent's dice while they take their turn
+        if (payload && payload.by !== me) setOppLive(payload as TurnSnapshot)
+      })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') void refresh()
       })
+    channelRef.current = channel
     const poll = window.setInterval(() => void refresh(), 5000)
     const onFocus = () => void refresh()
     window.addEventListener('focus', onFocus)
     document.addEventListener('visibilitychange', onFocus)
     return () => {
+      channelRef.current = null
       void supabase.removeChannel(channel)
       window.clearInterval(poll)
       window.removeEventListener('focus', onFocus)
       document.removeEventListener('visibilitychange', onFocus)
     }
-  }, [matchId, applyRow])
+  }, [matchId, applyRow, me])
+
+  // When the turn comes back to us the opponent's live dice are stale.
+  const turnHolder = match?.turn
+  useEffect(() => {
+    if (turnHolder === me) setOppLive(null)
+  }, [turnHolder, me])
 
   if (error) {
     return (
@@ -252,6 +267,15 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
         </div>
       )}
 
+      {!myTurn && match.status === 'active' && oppLive && (
+        <div className="opp-live">
+          <span className="opp-live-label">
+            🎲 {names[opp] ?? t('opponent')} · {t('rollsLeft')}: {3 - oppLive.rollsUsed}
+          </span>
+          <MiniDice values={oppLive.values} held={oppLive.held} rolling={oppLive.rolling} />
+        </div>
+      )}
+
       <div className="multi-boards">
         <div>
           <Game
@@ -261,6 +285,13 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
             active={myTurn && !finished && !abandoned}
             forcedAnnounce={forcedAnnounce}
             onMove={play}
+            onTurnEvent={(s) =>
+              void channelRef.current?.send({
+                type: 'broadcast',
+                event: 'dice',
+                payload: { ...s, by: me },
+              })
+            }
           />
         </div>
         <div className="opponent-board">

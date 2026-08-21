@@ -39,6 +39,7 @@ export default function SheetTable({
   const totals = cols.map((c) => columnTotals(sheet[c]))
 
   return (
+    <div className="sheet-wrap">
     <table className={`sheet ${compact ? 'compact' : ''}`}>
       <thead>
         <tr>
@@ -113,5 +114,6 @@ export default function SheetTable({
         </tr>
       </tbody>
     </table>
+    </div>
   )
 }

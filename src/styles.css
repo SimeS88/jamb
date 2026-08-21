@@ -162,6 +162,17 @@ button.primary:hover:not(:disabled) { background: var(--accent-dark); }
   transform: translateY(4px);
 }
 
+@keyframes tumble {
+  0%   { transform: rotate(0deg) translate(0, 0); }
+  25%  { transform: rotate(92deg) translate(1px, -2px); }
+  50%  { transform: rotate(184deg) translate(-2px, 1px); }
+  75%  { transform: rotate(272deg) translate(2px, 1px); }
+  100% { transform: rotate(360deg) translate(0, 0); }
+}
+
+.die.tumbling, .mini-die.tumbling { animation: tumble 0.25s linear infinite; }
+.die { transition: transform 0.15s ease; }
+
 .pips {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -175,7 +186,44 @@ button.primary:hover:not(:disabled) { background: var(--accent-dark); }
 
 .controls { display: flex; gap: 0.7rem; margin-top: 0.9rem; }
 
+/* ---- opponent live dice ---- */
+.opp-live {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.6rem 0.9rem;
+}
+
+.opp-live-label { font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+
+.mini-dice { display: inline-flex; gap: 0.35rem; }
+
+.mini-die {
+  width: 34px;
+  height: 34px;
+  padding: 4px;
+  border-radius: 7px;
+  border: 2px solid var(--line);
+  background: #fff;
+  display: inline-block;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.mini-die.held {
+  background: var(--held);
+  border-color: #d9a521;
+  transform: translateY(3px);
+}
+
+.mini-die .pips { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); width: 100%; height: 100%; }
+
 /* ---- score sheet ---- */
+.sheet-wrap { overflow-x: auto; }
+
 .sheet {
   width: 100%;
   border-collapse: collapse;
@@ -434,3 +482,45 @@ button.cell.announceable {
 }
 
 .rules summary { cursor: pointer; font-weight: 600; }
+
+/* ---- mobile ---- */
+@media (max-width: 520px) {
+  .app { padding: 0.5rem; }
+  h1 { font-size: 1.5rem; }
+  .subtitle { font-size: 0.8rem; }
+
+  header { gap: 0.5rem; }
+  .settings { gap: 0.5rem; width: 100%; justify-content: space-between; }
+  .settings label { font-size: 0.72rem; flex: 1; }
+  .settings select { width: 100%; }
+
+  .dice-area { padding: 0.7rem; }
+  .dice-row { gap: 0.4rem; justify-content: center; }
+  .die { width: 46px; height: 46px; padding: 5px; border-radius: 8px; }
+  .controls { flex-wrap: wrap; }
+  .controls button { flex: 1; min-height: 44px; }
+
+  .sheet { font-size: 0.68rem; }
+  .sheet th, .sheet td { padding: 0.16rem 0.14rem; }
+  .sheet tbody th { font-size: 0.64rem; }
+  .sheet thead th { padding: 0.2rem 0.1rem; }
+  .col-symbol { font-size: 0.85rem; }
+  .col-name { font-size: 0.55rem; }
+  .cell { min-width: 1.7rem; min-height: 1.35rem; }
+  button.cell.playable, button.cell.announceable { padding: 0.12rem 0.25rem; min-height: 1.6rem; }
+  .sheet .subtotal { font-size: 0.6rem; }
+  .sheet .grand { font-size: 0.9rem; }
+
+  .multi-header { gap: 0.4rem; }
+  .player-chip { padding: 0.25rem 0.6rem; font-size: 0.78rem; }
+  .vs { font-size: 0.95rem; }
+  .multi-header .leave { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
+  .banner { padding: 0.6rem 0.8rem; font-size: 0.85rem; gap: 0.5rem; }
+  .opp-live { padding: 0.5rem 0.7rem; }
+  .mini-die { width: 28px; height: 28px; padding: 3px; }
+
+  .menu-choice { font-size: 1.05rem; padding: 0.8rem 1rem; }
+  .lobby-actions button { width: 100%; min-height: 46px; }
+  .player-list li { flex-wrap: wrap; }
+  .scorecard { gap: 0.4rem; }
+}

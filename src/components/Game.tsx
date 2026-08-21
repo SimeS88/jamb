@@ -6,6 +6,14 @@ import { useI18n } from '../i18n'
 
 export type ThrowMode = 'manual' | 'automatic'
 
+/** Live snapshot of the current turn, broadcast to the opponent in 2P games. */
+export interface TurnSnapshot {
+  values: number[]
+  held: boolean[]
+  rollsUsed: number
+  rolling: boolean
+}
+
 interface Props {
   sheet: Sheet
   cols: readonly ColId[]
@@ -15,6 +23,7 @@ interface Props {
   /** counter-announcement: the row this player is forced to play in the counter column */
   forcedAnnounce?: RowId | null
   onMove: (col: ColId, row: RowId, score: number) => void
+  onTurnEvent?: (s: TurnSnapshot) => void
 }
 
 const DICE_COUNT = 6
@@ -22,10 +31,12 @@ const PIP_LAYOUT: Record<number, number[]> = {
   1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8],
 }
 
-function DieFace({ die, disabled, onClick }: { die: Die; disabled: boolean; onClick: () => void }) {
+function DieFace({
+  die, disabled, rolling, onClick,
+}: { die: Die; disabled: boolean; rolling?: boolean; onClick: () => void }) {
   return (
     <button
-      className={`die ${die.held ? 'held' : ''}`}
+      className={`die ${die.held ? 'held' : ''} ${rolling && !die.held ? 'tumbling' : ''}`}
       onClick={onClick}
       disabled={disabled}
       aria-pressed={die.held}
@@ -39,7 +50,9 @@ function DieFace({ die, disabled, onClick }: { die: Die; disabled: boolean; onCl
   )
 }
 
-export default function Game({ sheet, cols, throwMode, active, forcedAnnounce = null, onMove }: Props) {
+export default function Game({
+  sheet, cols, throwMode, active, forcedAnnounce = null, onMove, onTurnEvent,
+}: Props) {
   const { t } = useI18n()
   const [dice, setDice] = useState<Die[]>(() => newDice(DICE_COUNT))
   const [rollsUsed, setRollsUsed] = useState(0)
@@ -66,9 +79,19 @@ export default function Game({ sheet, cols, throwMode, active, forcedAnnounce = 
     }
   }, [active, forcedAnnounce])
 
+  function emit(ds: Die[], used: number, isRolling: boolean) {
+    onTurnEvent?.({
+      values: ds.map((d) => d.value),
+      held: ds.map((d) => d.held),
+      rollsUsed: used,
+      rolling: isRolling,
+    })
+  }
+
   function doRoll(current: Die[], used: number) {
     if (used >= 3 || rolling || !active) return
     setRolling(true)
+    emit(current, used, true)
     const final = rollFree(current)
     let ticks = 0
     animTimer.current = window.setInterval(() => {
@@ -81,6 +104,7 @@ export default function Game({ sheet, cols, throwMode, active, forcedAnnounce = 
         setDice(final)
         setRollsUsed(used + 1)
         setRolling(false)
+        emit(final, used + 1, false)
       }
     }, 80)
   }
@@ -96,7 +120,9 @@ export default function Game({ sheet, cols, throwMode, active, forcedAnnounce = 
 
   function toggleHold(i: number) {
     if (rollsUsed === 0 || rollsUsed >= 3 || rolling || !active) return
-    setDice((prev) => prev.map((d, j) => (j === i ? { ...d, held: !d.held } : d)))
+    const next = dice.map((d, j) => (j === i ? { ...d, held: !d.held } : d))
+    setDice(next)
+    emit(next, rollsUsed, false)
   }
 
   function scorableIn(col: ColId): RowId[] {
@@ -132,6 +158,7 @@ export default function Game({ sheet, cols, throwMode, active, forcedAnnounce = 
     setDice(newDice(DICE_COUNT))
     setRollsUsed(0)
     setAnnounced(null)
+    emit(newDice(DICE_COUNT), 0, false)
     onMove(col, row, score)
   }
 
@@ -148,6 +175,7 @@ export default function Game({ sheet, cols, throwMode, active, forcedAnnounce = 
             <DieFace
               key={i}
               die={d}
+              rolling={rolling}
               disabled={rollsUsed === 0 || rollsUsed >= 3 || rolling || !active}
               onClick={() => toggleHold(i)}
             />
