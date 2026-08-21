@@ -28,34 +28,60 @@ body {
 header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
 }
+
+.brand { flex: 1; min-width: 0; }
 
 h1 {
   margin: 0;
   color: var(--accent);
   font-size: 2.2rem;
   letter-spacing: 0.05em;
+  line-height: 1.1;
 }
 
-.subtitle { margin: 0.2rem 0 0; color: var(--muted); }
+.subtitle { margin: 0.15rem 0 0; color: var(--muted); }
 
-.settings {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-end;
-  flex-wrap: wrap;
+/* During play the header shrinks to a single slim bar. */
+header.slim { gap: 0.5rem; }
+header.slim h1 { font-size: 1.25rem; }
+
+.icon-btn {
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.4rem 0.6rem;
+  flex-shrink: 0;
 }
 
-.settings label {
+.settings-menu { position: relative; flex-shrink: 0; }
+
+.settings-pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.4rem);
+  z-index: 20;
   display: flex;
   flex-direction: column;
-  font-size: 0.8rem;
+  gap: 0.7rem;
+  min-width: 12rem;
+  padding: 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.settings-pop label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.78rem;
   color: var(--muted);
   gap: 0.2rem;
 }
+
+.settings-pop select { width: 100%; }
 
 select, input {
   font: inherit;
@@ -107,6 +133,9 @@ button.primary:hover:not(:disabled) { background: var(--accent-dark); }
   gap: 1.5rem;
   margin-top: 1.5rem;
 }
+
+/* The board is the point — keep it close to the top. */
+.play-area { margin-top: 0.7rem; gap: 1rem; }
 
 .lobby { grid-template-columns: minmax(280px, 380px) 1fr; }
 .play-area { grid-template-columns: 1fr minmax(240px, 300px); }
@@ -318,7 +347,7 @@ button.cell.announceable {
 .menu-icon { font-size: 1.6rem; }
 
 /* ---- two players ---- */
-.multi { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem; }
+.multi { display: flex; flex-direction: column; gap: 0.7rem; margin-top: 0.7rem; }
 
 .multi-status {
   margin-top: 3rem;
@@ -490,9 +519,8 @@ button.cell.announceable {
   .subtitle { font-size: 0.8rem; }
 
   header { gap: 0.5rem; }
-  .settings { gap: 0.5rem; width: 100%; justify-content: space-between; }
-  .settings label { font-size: 0.72rem; flex: 1; }
-  .settings select { width: 100%; }
+  header.slim h1 { font-size: 1.1rem; }
+  .settings-pop { min-width: 11rem; }
 
   .dice-area { padding: 0.7rem; }
   .dice-row { gap: 0.4rem; justify-content: center; }

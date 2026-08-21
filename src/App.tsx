@@ -5,10 +5,11 @@ import type { ThrowMode } from './components/Game'
 import Leaderboard from './components/Leaderboard'
 import Menu from './components/Menu'
 import MultiGame from './components/MultiGame'
+import SettingsMenu from './components/SettingsMenu'
 import SinglePlayer from './components/SinglePlayer'
 import StatsPanel from './components/StatsPanel'
 import { supabase } from './lib/supabase'
-import { useI18n, type Lang } from './i18n'
+import { useI18n } from './i18n'
 
 type Screen = 'menu' | 'single' | 'multi'
 
@@ -17,7 +18,7 @@ function initialThrowMode(): ThrowMode {
 }
 
 export default function App() {
-  const { t, lang, setLang } = useI18n()
+  const { t } = useI18n()
   const [session, setSession] = useState<Session | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [guest, setGuest] = useState(false)
@@ -105,44 +106,26 @@ export default function App() {
 
   return (
     <main className="app">
-      <header>
-        <div>
+      <header className={screen === 'menu' ? '' : 'slim'}>
+        {screen !== 'menu' && screen !== 'multi' && (
+          <button className="icon-btn" onClick={backToMenu} title={t('backToMenu')}>
+            ←
+          </button>
+        )}
+        <div className="brand">
           <h1>{t('title')}</h1>
-          <p className="subtitle">{t('subtitle')}</p>
+          {screen === 'menu' && <p className="subtitle">{t('subtitle')}</p>}
         </div>
-        <div className="settings">
-          {screen !== 'menu' && screen !== 'multi' && (
-            <button onClick={backToMenu}>← {t('backToMenu')}</button>
-          )}
-          <label>
-            {t('language')}
-            <select value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
-              <option value="hr">Hrvatski</option>
-              <option value="en">English</option>
-            </select>
-          </label>
-          <label>
-            {t('throwMode')}
-            <select
-              value={throwMode}
-              onChange={(e) => setThrowMode(e.target.value as ThrowMode)}
-            >
-              <option value="manual">{t('manual')}</option>
-              <option value="automatic">{t('automatic')}</option>
-            </select>
-          </label>
-          {session && (
-            <button
-              onClick={() => {
-                void supabase.auth.signOut()
-                setGuest(false)
-                setScreen('menu')
-              }}
-            >
-              {t('signOut')}
-            </button>
-          )}
-        </div>
+        <SettingsMenu
+          throwMode={throwMode}
+          setThrowMode={setThrowMode}
+          signedIn={session !== null}
+          onSignOut={() => {
+            void supabase.auth.signOut()
+            setGuest(false)
+            setScreen('menu')
+          }}
+        />
       </header>
 
       {banner && (
