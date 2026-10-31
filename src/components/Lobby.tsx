@@ -101,11 +101,7 @@ export default function Lobby({ session, online, onMatch }: Props) {
 
   async function cancelChallenge() {
     if (!outgoing) return
-    await supabase
-      .from('jamb_matches')
-      .update({ status: 'declined' })
-      .eq('id', outgoing.id)
-      .eq('status', 'challenge')
+    await supabase.rpc('jamb_abandon', { p_match: outgoing.id })
     setOutgoing(null)
   }
 

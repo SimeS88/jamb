@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RealtimeChannel, Session } from '@supabase/supabase-js'
-import Game, { type ThrowMode, type TurnSnapshot } from './Game'
+import Game, { EMPTY_TURN, type ThrowMode, type TurnSnapshot } from './Game'
 import Lobby from './Lobby'
 import MiniDice from './MiniDice'
 import SheetTable from './SheetTable'
-import { MULTI_COLS, grandTotal, isComplete, type ColId, type RowId } from '../game/rules'
-import { asRow, normalizeSheet, type MatchRow } from '../game/match'
+import { MULTI_COLS, grandTotal, type RowId } from '../game/rules'
+import { asRow, normalizeSheet, turnView, type MatchRow } from '../game/match'
 import { supabase } from '../lib/supabase'
 import { useI18n } from '../i18n'
 
@@ -127,6 +127,16 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
     if (turnHolder === me) setOppLive(null)
   }, [turnHolder, me])
 
+  // The database records both scores when the match finishes; whichever
+  // client sees it first (own move or opponent's) refreshes the leaderboard.
+  const status = match?.status
+  useEffect(() => {
+    if (status === 'finished' && match && !savedRef.current) {
+      savedRef.current = true
+      onFinished(grandTotal(normalizeSheet(match.state.sheets?.[me]), MULTI_COLS))
+    }
+  }, [status, match, me, onFinished])
+
   if (error) {
     return (
       <div className="multi-status">
@@ -155,11 +165,7 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
         <p className="searching">🔍 {t('searching')}</p>
         <button
           onClick={async () => {
-            await supabase
-              .from('jamb_matches')
-              .update({ status: 'abandoned' })
-              .eq('id', match.id)
-              .eq('status', 'waiting')
+            await supabase.rpc('jamb_abandon', { p_match: match.id })
             setMatch(null)
           }}
         >
@@ -189,16 +195,12 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
       ? last.row
       : null
 
-  async function play(col: ColId, row: RowId, score: number) {
+  // Every action runs atomically in the database: it rolls the dice, checks
+  // turn, column order, announcements and the counter obligation, and
+  // computes the score. A failure is shown instead of silently losing it.
+  async function call(fn: string, args: Record<string, unknown>) {
     if (!match || !myTurn) return
-    // The move is applied atomically in the database (turn and cell are
-    // validated there); a failure is shown instead of silently losing it.
-    const { data, error: rpcErr } = await supabase.rpc('jamb_play_move', {
-      p_match: match.id,
-      p_col: col,
-      p_row: row,
-      p_score: score,
-    })
+    const { data, error: rpcErr } = await supabase.rpc(fn, { p_match: match.id, ...args })
     if (rpcErr || !data) {
       setSyncTrouble(true)
       await supabase.auth.refreshSession()
@@ -207,25 +209,29 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
     const updated = asRow(data)
     setSyncTrouble(false)
     applyRow(updated)
-    const nextMine = normalizeSheet(updated.state.sheets?.[me])
-    if (isComplete(nextMine, MULTI_COLS) && !savedRef.current) {
-      savedRef.current = true
-      onFinished(grandTotal(nextMine, MULTI_COLS))
-    }
   }
 
   async function leave() {
     if (!match) return
     if (match.status === 'active') {
       if (!window.confirm(t('confirmLeave'))) return
-      await supabase
-        .from('jamb_matches')
-        .update({ status: 'abandoned', winner: opp })
-        .eq('id', match.id)
-        .eq('status', 'active')
+      await supabase.rpc('jamb_abandon', { p_match: match.id })
     }
     setMatch(null) // back to the lobby
   }
+
+  // opponent's dice: live broadcast if we have it, else what the database holds
+  const oppCur = !myTurn ? turnView(match.state.cur) : null
+  const oppDice: TurnSnapshot | null =
+    oppLive ??
+    (oppCur?.dice
+      ? {
+          values: oppCur.dice,
+          held: oppCur.dice.map((_, i) => (match.state.cur?.held ?? []).includes(i)),
+          rollsUsed: oppCur.rolls,
+          rolling: false,
+        }
+      : null)
 
   const finished = match.status === 'finished'
   const abandoned = match.status === 'abandoned'
@@ -267,12 +273,12 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
         </div>
       )}
 
-      {!myTurn && match.status === 'active' && oppLive && (
+      {!myTurn && match.status === 'active' && oppDice && (
         <div className="opp-live">
           <span className="opp-live-label">
-            🎲 {names[opp] ?? t('opponent')} · {t('rollsLeft')}: {3 - oppLive.rollsUsed}
+            🎲 {names[opp] ?? t('opponent')} · {t('rollsLeft')}: {3 - oppDice.rollsUsed}
           </span>
-          <MiniDice values={oppLive.values} held={oppLive.held} rolling={oppLive.rolling} />
+          <MiniDice values={oppDice.values} held={oppDice.held} rolling={oppDice.rolling} />
         </div>
       )}
 
@@ -283,8 +289,11 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
             cols={MULTI_COLS}
             throwMode={throwMode}
             active={myTurn && !finished && !abandoned}
+            turn={myTurn ? turnView(match.state.cur) : EMPTY_TURN}
             forcedAnnounce={forcedAnnounce}
-            onMove={play}
+            onRoll={(hold) => call('jamb_roll', { p_hold: hold })}
+            onAnnounce={(row) => call('jamb_announce', { p_row: row })}
+            onMove={(col, row) => call('jamb_play_move', { p_col: col, p_row: row })}
             onTurnEvent={(s) =>
               void channelRef.current?.send({
                 type: 'broadcast',
