@@ -21,9 +21,11 @@ npm run dev
 
 ## Security
 
-- Supabase **Row Level Security** on all tables: users can only read/insert their own rows; scores are immutable (no update/delete policies).
+- **The database is the referee.** Signed-in games roll their dice in Postgres (pgcrypto, rejection-sampled), keep the current turn server-side, enforce the 3-roll limit, column order, announcements and the counter obligation, and compute every score. The client only sends which dice to hold and which cell to write. Scores reach `jamb_games` only when the database completes a game (`jamb_solo_move` / `jamb_play_move`); no client can insert or edit one.
+- SQL rules (`jamb_score`, `jamb_can_write`) are ports of `src/game/rules.ts` and `Game.tsx` — change both together.
+- Supabase **Row Level Security** on all tables: users can only read their own rows; `jamb_games`, `jamb_solo` and `jamb_matches` have no client write policies, all writes go through RPCs.
 - Leaderboard goes through a `security definer` RPC that exposes only display names and aggregate scores — never emails or user ids.
-- Dice rolls use `crypto.getRandomValues` (rejection-sampled for uniformity), not `Math.random`.
+- Guest play (no account, nothing saved) rolls locally with `crypto.getRandomValues`.
 - Database constraints validate score bounds, name length, and throw mode server-side.
 - Netlify serves strict security headers: CSP, HSTS, `X-Frame-Options: DENY`, `nosniff`, restrictive Permissions-Policy.
 - Only the publishable Supabase key ships to the client; no secrets in the repo (`.env` is gitignored).

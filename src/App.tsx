@@ -70,27 +70,12 @@ export default function App() {
     localStorage.setItem('jamb.throwMode', m)
   }
 
-  async function saveScore(score: number): Promise<boolean> {
-    if (!session) return false
-    const { error } = await supabase.from('jamb_games').insert({
-      user_id: session.user.id,
-      score,
-      dice_count: 6,
-      throw_mode: throwMode,
-    })
-    if (!error) setLbKey((k) => k + 1)
-    return !error
-  }
-
-  async function handleSingleEnd(score: number) {
-    if (!session) {
-      setBanner(`${t('gameOver')} ${t('finalScore')}: ${score}. ${t('scoreNotSaved')}`)
-      return
-    }
-    const ok = await saveScore(score)
-    setBanner(
-      `${t('gameOver')} ${t('finalScore')}: ${score}. ${ok ? t('scoreSaved') : t('saveError')}`,
-    )
+  // Scores are written by the database when a game completes; the client
+  // only refreshes the leaderboard and reports the outcome.
+  function handleSingleEnd(score: number, saved: boolean) {
+    if (saved) setLbKey((k) => k + 1)
+    const note = !session ? t('scoreNotSaved') : saved ? t('scoreSaved') : t('saveError')
+    setBanner(`${t('gameOver')} ${t('finalScore')}: ${score}. ${note}`)
   }
 
   function backToMenu() {
@@ -172,7 +157,12 @@ export default function App() {
         </div>
       ) : screen === 'single' ? (
         <div className="play-area">
-          <SinglePlayer key={gameKey} throwMode={throwMode} onGameEnd={handleSingleEnd} />
+          <SinglePlayer
+            key={gameKey}
+            session={session}
+            throwMode={throwMode}
+            onGameEnd={handleSingleEnd}
+          />
           <aside>
             <Leaderboard refreshKey={lbKey} />
             <details className="rules">
@@ -188,7 +178,7 @@ export default function App() {
             session={session}
             throwMode={throwMode}
             onExit={backToMenu}
-            onFinished={(score) => void saveScore(score)}
+            onFinished={() => setLbKey((k) => k + 1)}
           />
         )
       )}

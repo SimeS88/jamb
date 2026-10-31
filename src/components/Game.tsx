@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { newDice, rollDie, rollFree, type Die } from '../game/dice'
+import { rollDie } from '../game/dice'
 import { ROWS, allowedRows, scoreFor, type ColId, type RowId, type Sheet } from '../game/rules'
 import SheetTable from './SheetTable'
 import { useI18n } from '../i18n'
@@ -14,36 +14,54 @@ export interface TurnSnapshot {
   rolling: boolean
 }
 
+/**
+ * The current turn as the authority (the database, or the local guest
+ * engine) reports it. Game never invents dice or scores of its own.
+ */
+export interface TurnView {
+  dice: number[] | null
+  rolls: number
+  announced: RowId | null
+}
+
+export const EMPTY_TURN: TurnView = { dice: null, rolls: 0, announced: null }
+
 interface Props {
   sheet: Sheet
   cols: readonly ColId[]
   throwMode: ThrowMode
-  /** whether this player may act right now (always true in single player until done) */
+  /** whether this player may act right now */
   active: boolean
+  turn: TurnView
   /** counter-announcement: the row this player is forced to play in the counter column */
   forcedAnnounce?: RowId | null
-  onMove: (col: ColId, row: RowId, score: number) => void
+  /** roll every die not listed in `hold` (die indexes 0..5) */
+  onRoll: (hold: number[]) => Promise<void>
+  onAnnounce: (row: RowId) => Promise<void>
+  onMove: (col: ColId, row: RowId) => Promise<void>
   onTurnEvent?: (s: TurnSnapshot) => void
 }
 
 const DICE_COUNT = 6
+const BLANK = Array.from({ length: DICE_COUNT }, () => 1)
+const NO_HOLDS = Array.from({ length: DICE_COUNT }, () => false)
 const PIP_LAYOUT: Record<number, number[]> = {
   1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8],
 }
 
 function DieFace({
-  die, disabled, rolling, onClick,
-}: { die: Die; disabled: boolean; rolling?: boolean; onClick: () => void }) {
+  value, held, disabled, rolling, onClick,
+}: { value: number; held: boolean; disabled: boolean; rolling?: boolean; onClick: () => void }) {
   return (
     <button
-      className={`die ${die.held ? 'held' : ''} ${rolling && !die.held ? 'tumbling' : ''}`}
+      className={`die ${held ? 'held' : ''} ${rolling && !held ? 'tumbling' : ''}`}
       onClick={onClick}
       disabled={disabled}
-      aria-pressed={die.held}
+      aria-pressed={held}
     >
       <span className="pips">
         {Array.from({ length: 9 }, (_, i) => (
-          <span key={i} className={PIP_LAYOUT[die.value].includes(i) ? 'pip' : 'pip empty'} />
+          <span key={i} className={PIP_LAYOUT[value].includes(i) ? 'pip' : 'pip empty'} />
         ))}
       </span>
     </button>
@@ -51,82 +69,86 @@ function DieFace({
 }
 
 export default function Game({
-  sheet, cols, throwMode, active, forcedAnnounce = null, onMove, onTurnEvent,
+  sheet, cols, throwMode, active, turn, forcedAnnounce = null,
+  onRoll, onAnnounce, onMove, onTurnEvent,
 }: Props) {
   const { t } = useI18n()
-  const [dice, setDice] = useState<Die[]>(() => newDice(DICE_COUNT))
-  const [rollsUsed, setRollsUsed] = useState(0)
-  const [announced, setAnnounced] = useState<RowId | null>(null)
+  const [held, setHeld] = useState<boolean[]>(NO_HOLDS)
   const [rolling, setRolling] = useState(false)
-  const animTimer = useRef<number | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [animFaces, setAnimFaces] = useState<number[] | null>(null)
+  const autoTried = useRef(false)
 
-  const values = dice.map((d) => d.value)
-  const canRoll = active && !rolling && rollsUsed < 3
-  const canAnnounce = active && !rolling && rollsUsed === 1 && announced === null && !forcedAnnounce
-  // Is any cell playable in the self-directed columns this turn?
+  const rollsUsed = turn.rolls
+  const announced = turn.announced
+  const values = turn.dice ?? BLANK
+  const shown = animFaces ?? values
+  const canRoll = active && !rolling && !busy && rollsUsed < 3
+  const canAnnounce =
+    active && !rolling && !busy && rollsUsed === 1 && announced === null && !forcedAnnounce
   const ordinaryLegal = (['down', 'up', 'free'] as ColId[]).some(
     (c) => allowedRows(sheet, c).length > 0,
   )
 
-  useEffect(() => () => { if (animTimer.current) window.clearInterval(animTimer.current) }, [])
-
-  // A new turn begins whenever we become active: fresh dice, forced announcement applied.
+  // New turn (or turn handed over): drop holds, allow one automatic roll.
+  const fresh = rollsUsed === 0
   useEffect(() => {
-    if (active) {
-      setDice(newDice(DICE_COUNT))
-      setRollsUsed(0)
-      setAnnounced(forcedAnnounce)
+    if (fresh || !active) {
+      setHeld(NO_HOLDS)
+      autoTried.current = false
     }
-  }, [active, forcedAnnounce])
+  }, [fresh, active])
 
-  function emit(ds: Die[], used: number, isRolling: boolean) {
-    onTurnEvent?.({
-      values: ds.map((d) => d.value),
-      held: ds.map((d) => d.held),
-      rollsUsed: used,
-      rolling: isRolling,
-    })
-  }
-
-  function doRoll(current: Die[], used: number) {
-    if (used >= 3 || rolling || !active) return
-    setRolling(true)
-    emit(current, used, true)
-    const final = rollFree(current)
-    let ticks = 0
-    animTimer.current = window.setInterval(() => {
-      ticks++
-      if (ticks < 6) {
-        setDice((prev) => prev.map((d) => (d.held ? d : { ...d, value: rollDie() })))
-      } else {
-        if (animTimer.current) window.clearInterval(animTimer.current)
-        animTimer.current = null
-        setDice(final)
-        setRollsUsed(used + 1)
-        setRolling(false)
-        emit(final, used + 1, false)
-      }
-    }, 80)
-  }
-
-  // Automatic mode: first roll of each turn happens by itself.
+  // Mirror the turn to the opponent whenever it settles.
   useEffect(() => {
-    if (throwMode === 'automatic' && active && rollsUsed === 0 && !rolling) {
-      const id = window.setTimeout(() => doRoll(dice, 0), 500)
-      return () => window.clearTimeout(id)
-    }
+    if (!active || rolling) return
+    onTurnEvent?.({ values, held, rollsUsed, rolling: false })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [throwMode, active, rollsUsed])
+  }, [active, rolling, values.join(''), held.join(''), rollsUsed])
+
+  async function doRoll() {
+    if (!canRoll) return
+    const hold = rollsUsed > 0 ? held.flatMap((h, i) => (h ? [i] : [])) : []
+    const keep = (i: number) => rollsUsed > 0 && held[i]
+    setRolling(true)
+    onTurnEvent?.({ values, held, rollsUsed, rolling: true })
+    // tumble locally while the authority rolls the real dice
+    let faces = values
+    const timer = window.setInterval(() => {
+      faces = faces.map((v, i) => (keep(i) ? v : rollDie()))
+      setAnimFaces(faces)
+    }, 80)
+    const minSpin = new Promise((r) => window.setTimeout(r, 480))
+    try {
+      await Promise.all([onRoll(hold), minSpin])
+    } catch {
+      // the parent reports failures; just stop spinning
+    } finally {
+      window.clearInterval(timer)
+      setAnimFaces(null)
+      setRolling(false)
+    }
+  }
+
+  // Automatic mode: first roll of each turn happens by itself (once).
+  useEffect(() => {
+    if (throwMode !== 'automatic' || !active || rollsUsed !== 0 || rolling || busy) return
+    if (autoTried.current) return
+    const id = window.setTimeout(() => {
+      autoTried.current = true
+      void doRoll()
+    }, 500)
+    return () => window.clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [throwMode, active, rollsUsed, rolling, busy])
 
   function toggleHold(i: number) {
-    if (rollsUsed === 0 || rollsUsed >= 3 || rolling || !active) return
-    const next = dice.map((d, j) => (j === i ? { ...d, held: !d.held } : d))
-    setDice(next)
-    emit(next, rollsUsed, false)
+    if (rollsUsed === 0 || rollsUsed >= 3 || rolling || busy || !active) return
+    setHeld((h) => h.map((x, j) => (j === i ? !x : x)))
   }
 
   function scorableIn(col: ColId): RowId[] {
-    if (!cols.includes(col) || !active || rollsUsed === 0 || rolling) return []
+    if (!cols.includes(col) || !active || rollsUsed === 0 || rolling || busy) return []
     // Counter-announcement in force: the counter cell is the only legal move.
     if (forcedAnnounce !== null) {
       return col === 'counter' && sheet.counter[forcedAnnounce] === undefined
@@ -152,37 +174,44 @@ export default function Game({
     }
   }
 
+  async function act(fn: () => Promise<void>) {
+    setBusy(true)
+    try {
+      await fn()
+    } catch {
+      // reported by the parent
+    } finally {
+      setBusy(false)
+    }
+  }
+
   function writeCell(col: ColId, row: RowId) {
     if (!scorableIn(col).includes(row)) return
-    const score = scoreFor(row, values)
-    setDice(newDice(DICE_COUNT))
-    setRollsUsed(0)
-    setAnnounced(null)
-    emit(newDice(DICE_COUNT), 0, false)
-    onMove(col, row, score)
+    void act(() => onMove(col, row))
   }
 
   function announceRow(row: RowId) {
     if (!canAnnounce || sheet.announce[row] !== undefined) return
-    setAnnounced(row)
+    void act(() => onAnnounce(row))
   }
 
   return (
     <div className="game">
       <div className="dice-area">
         <div className="dice-row">
-          {dice.map((d, i) => (
+          {shown.map((v, i) => (
             <DieFace
               key={i}
-              die={d}
+              value={v}
+              held={held[i]}
               rolling={rolling}
-              disabled={rollsUsed === 0 || rollsUsed >= 3 || rolling || !active}
+              disabled={rollsUsed === 0 || rollsUsed >= 3 || rolling || busy || !active}
               onClick={() => toggleHold(i)}
             />
           ))}
         </div>
         <div className="controls">
-          <button className="primary" onClick={() => doRoll(dice, rollsUsed)} disabled={!canRoll}>
+          <button className="primary" onClick={() => void doRoll()} disabled={!canRoll}>
             {rolling ? t('rolling') : `${t('roll')} (${3 - rollsUsed})`}
           </button>
         </div>
