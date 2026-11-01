@@ -28,6 +28,7 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
   const savedRef = useRef(false)
   const failsRef = useRef(0)
   const channelRef = useRef<RealtimeChannel | null>(null)
+  const [wideInit] = useState(() => window.matchMedia('(min-width: 901px)').matches)
 
   // Never let a stale fetch overwrite newer state.
   const applyRow = useCallback((row: MatchRow) => {
@@ -151,7 +152,7 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
     return (
       <div className="multi">
         <div className="multi-header">
-          <h2 className="lobby-title">⚔️ {t('twoPlayers')}</h2>
+          <h2 className="lobby-title">{t('twoPlayers')}</h2>
           <button className="leave" onClick={onExit}>{t('backToMenu')}</button>
         </div>
         <Lobby session={session} online={online} onMatch={(m) => { savedRef.current = false; setMatch(m) }} />
@@ -251,7 +252,7 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
         <div className={`player-chip ${myTurn ? 'turn' : ''}`}>
           {names[me] ?? t('you')} · {grandTotal(mySheet)}
         </div>
-        <span className="vs">⚔️</span>
+        <span className="vs">vs</span>
         <div className={`player-chip ${!myTurn && match.status === 'active' ? 'turn' : ''}`}>
           {names[opp] ?? t('opponent')} · {grandTotal(oppSheet)}
         </div>
@@ -276,7 +277,7 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
       {!myTurn && match.status === 'active' && oppDice && (
         <div className="opp-live">
           <span className="opp-live-label">
-            🎲 {names[opp] ?? t('opponent')} · {t('rollsLeft')}: {3 - oppDice.rollsUsed}
+            {names[opp] ?? t('opponent')} · {t('rollsLeft')}: {3 - oppDice.rollsUsed}
           </span>
           <MiniDice values={oppDice.values} held={oppDice.held} rolling={oppDice.rolling} />
         </div>
@@ -303,10 +304,14 @@ export default function MultiGame({ session, throwMode, onExit, onFinished }: Pr
             }
           />
         </div>
-        <div className="opponent-board">
-          <h3>{names[opp] ?? t('opponent')}</h3>
+        {/* open beside the board on wide screens; a tap away on phones */}
+        <details className="opponent-board" open={wideInit}>
+          <summary>
+            <span>{t('opponentSheet')}</span>
+            <span className="opp-total">{names[opp] ?? t('opponent')} · {grandTotal(oppSheet)}</span>
+          </summary>
           <SheetTable sheet={oppSheet} cols={MULTI_COLS} compact />
-        </div>
+        </details>
       </div>
     </div>
   )
