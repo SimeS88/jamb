@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react'
 import { rollDie } from '../game/dice'
-
-const PIP_LAYOUT: Record<number, number[]> = {
-  1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8],
-}
+import { Pips } from './DieGlyph'
 
 interface Props {
   values: number[]
@@ -32,11 +29,7 @@ export default function MiniDice({ values, held, rolling }: Props) {
     <span className="mini-dice">
       {shown.map((v, i) => (
         <span key={i} className={`mini-die ${held[i] ? 'held' : ''} ${rolling && !held[i] ? 'tumbling' : ''}`}>
-          <span className="pips">
-            {Array.from({ length: 9 }, (_, j) => (
-              <span key={j} className={PIP_LAYOUT[v]?.includes(j) ? 'pip' : 'pip empty'} />
-            ))}
-          </span>
+          <Pips value={v} />
         </span>
       ))}
     </span>

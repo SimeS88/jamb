@@ -8,6 +8,7 @@ import MultiGame from './components/MultiGame'
 import SettingsMenu from './components/SettingsMenu'
 import SinglePlayer from './components/SinglePlayer'
 import StatsPanel from './components/StatsPanel'
+import { Pips } from './components/DieGlyph'
 import { supabase } from './lib/supabase'
 import { useI18n } from './i18n'
 
@@ -98,7 +99,12 @@ export default function App() {
           </button>
         )}
         <div className="brand">
-          <h1>{t('title')}</h1>
+          <h1>
+            <span className="brand-die" aria-hidden="true">
+              <Pips value={5} />
+            </span>
+            {t('title')}
+          </h1>
           {screen === 'menu' && <p className="subtitle">{t('subtitle')}</p>}
         </div>
         <SettingsMenu

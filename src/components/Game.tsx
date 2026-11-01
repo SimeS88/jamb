@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { rollDie } from '../game/dice'
 import { ROWS, allowedRows, scoreFor, type ColId, type RowId, type Sheet } from '../game/rules'
 import SheetTable from './SheetTable'
+import { Pips } from './DieGlyph'
 import { useI18n } from '../i18n'
 
 export type ThrowMode = 'manual' | 'automatic'
@@ -45,9 +46,6 @@ interface Props {
 const DICE_COUNT = 6
 const BLANK = Array.from({ length: DICE_COUNT }, () => 1)
 const NO_HOLDS = Array.from({ length: DICE_COUNT }, () => false)
-const PIP_LAYOUT: Record<number, number[]> = {
-  1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8],
-}
 
 function DieFace({
   value, held, disabled, rolling, onClick,
@@ -58,12 +56,9 @@ function DieFace({
       onClick={onClick}
       disabled={disabled}
       aria-pressed={held}
+      aria-label={`${value}`}
     >
-      <span className="pips">
-        {Array.from({ length: 9 }, (_, i) => (
-          <span key={i} className={PIP_LAYOUT[value].includes(i) ? 'pip' : 'pip empty'} />
-        ))}
-      </span>
+      <Pips value={value} />
     </button>
   )
 }
@@ -211,11 +206,16 @@ export default function Game({
           ))}
         </div>
         <div className="controls">
-          <button className="primary" onClick={() => void doRoll()} disabled={!canRoll}>
-            {rolling ? t('rolling') : `${t('roll')} (${3 - rollsUsed})`}
+          <button className="primary roll-btn" onClick={() => void doRoll()} disabled={!canRoll}>
+            <span>{rolling ? t('rolling') : t('roll')}</span>
+            <span className="rolls-left" aria-label={`${t('rollsLeft')}: ${3 - rollsUsed}`}>
+              {[0, 1, 2].map((i) => (
+                <span key={i} className={i < 3 - rollsUsed ? 'dot on' : 'dot'} />
+              ))}
+            </span>
           </button>
         </div>
-        {active && rollsUsed > 0 && rollsUsed < 3 && <p className="hint">{t('holdHint')}</p>}
+        {active && rollsUsed > 0 && rollsUsed < 3 && <p className="hint hold-hint">{t('holdHint')}</p>}
         {canAnnounce && <p className="hint">{t('announcePick')}: {t('announceHint').toLowerCase()}</p>}
         {forcedAnnounce && active && (
           <p className="hint announced">⚡ {t('counterForced')}: {t(forcedAnnounce)}</p>
