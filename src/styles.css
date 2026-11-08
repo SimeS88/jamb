@@ -28,6 +28,12 @@
 
   --ivory: #fffdf8;
   --ivory-shade: #ece6da;
+  --held-cream: #fbf1d4;
+  --pip: #1b2a33;          /* dice stay ivory with dark pips in every theme */
+  --red-ink: #c2302a;      /* red used as text on panels */
+  --menu-hover-ink: #9e2520;
+  --on-play: #ffffff;
+  --input-bg: #ffffff;
 
   --font-ui: 'Manrope Variable', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
   --font-display: 'Bricolage Grotesque Variable', 'Avenir Next', system-ui, sans-serif;
@@ -36,6 +42,7 @@
   --radius-control: 10px;
   --shadow-panel: 0 1px 0 rgba(0, 0, 0, 0.05), 0 14px 32px -18px rgba(0, 0, 0, 0.55);
 
+  color-scheme: light dark;
   font-family: var(--font-ui);
   font-feature-settings: 'tnum' 1;
   color: var(--ink);
@@ -133,6 +140,7 @@ header.slim h1 { font-size: 1.45rem; }
   padding: 1rem;
   background: var(--paper);
   color: var(--ink);
+  border: 1px solid var(--rule-strong);
   border-radius: 14px;
   box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.5);
 }
@@ -156,7 +164,7 @@ select, input {
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius-control);
-  background: var(--paper);
+  background: var(--input-bg);
 }
 
 input:focus, select:focus { border-color: var(--pen); outline: none; box-shadow: 0 0 0 3px rgba(35, 71, 166, 0.15); }
@@ -231,16 +239,16 @@ h2 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.01em
 .auth-panel { padding: 1.4rem; }
 .auth-tabs { display: flex; gap: 0.4rem; margin-bottom: 1.1rem; padding: 0.25rem; background: var(--paper-tint); border-radius: 12px; }
 .auth-tabs button { flex: 1; border: none; background: transparent; }
-.auth-tabs .active { background: var(--paper); color: var(--red); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+.auth-tabs .active { background: var(--paper); color: var(--red-ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
 .auth-panel form { display: flex; flex-direction: column; gap: 0.85rem; }
 .auth-panel label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; font-weight: 600; color: var(--muted); }
-.auth-message { color: var(--red); font-size: 0.88rem; }
+.auth-message { color: var(--red-ink); font-size: 0.88rem; }
 .multi-status .auth-message { color: #ffb4ae; }
 .auth-panel > button { width: 100%; }
 .auth-panel hr { border: none; border-top: 1px solid var(--rule); margin: 1.2rem 0; }
 
 .hint { color: var(--muted); font-size: 0.84rem; margin: 0.5rem 0 0; }
-.hint.announced { color: var(--red); font-weight: 700; }
+.hint.announced { color: var(--red-ink); font-weight: 700; }
 
 /* ---------- dice ---------- */
 
@@ -274,7 +282,7 @@ h2 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.01em
 .die.held {
   transform: translateY(-6px);
   border-color: var(--brass-dark);
-  background: linear-gradient(160deg, #fffaf0 0%, var(--brass-soft) 100%);
+  background: linear-gradient(160deg, #fffaf0 0%, var(--held-cream) 100%);
   box-shadow:
     0 0 0 3px var(--brass),
     0 2px 0 var(--brass-dark),
@@ -305,7 +313,7 @@ h2 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.01em
 .pip {
   border-radius: 50%;
   margin: 17%;
-  background: radial-gradient(circle at 35% 30%, #4a5a64 0%, var(--ink) 70%);
+  background: radial-gradient(circle at 35% 30%, #4a5a64 0%, var(--pip) 70%);
 }
 
 .pip.empty { background: transparent; }
@@ -466,14 +474,14 @@ button.cell.playable {
   box-shadow: none;
 }
 
-button.cell.playable:hover { background: var(--play); border-style: solid; color: #fff; }
+button.cell.playable:hover { background: var(--play); border-style: solid; color: var(--on-play); }
 
 button.cell.announceable {
   display: grid;
   place-items: center;
   background: var(--red-soft);
   border: 1.5px dashed var(--red);
-  color: var(--red);
+  color: var(--red-ink);
 }
 
 button.cell.announceable .col-icon { width: 1rem; height: 1rem; }
@@ -574,7 +582,7 @@ button.cell.announceable:hover { background: var(--red); color: #fff; border-sty
   text-align: left;
 }
 
-.menu-choice:hover:not(:disabled) { border-color: var(--red); background: var(--red-soft); color: var(--red-dark); }
+.menu-choice:hover:not(:disabled) { border-color: var(--red); background: var(--red-soft); color: var(--menu-hover-ink); }
 
 .menu-icon { position: relative; display: inline-flex; width: 3rem; height: 2.4rem; align-items: center; }
 .menu-die {
@@ -617,7 +625,7 @@ button.cell.announceable:hover { background: var(--red); color: #fff; border-sty
   white-space: nowrap;
 }
 
-.player-chip.turn { background: var(--brass); border-color: var(--brass); color: var(--ink); }
+.player-chip.turn { background: var(--brass); border-color: var(--brass); color: var(--pip); }
 
 .vs { font-size: 0.85rem; font-weight: 700; color: var(--table-muted); }
 
@@ -692,7 +700,7 @@ button.cell.announceable:hover { background: var(--red); color: #fff; border-sty
 .stat.win { background: var(--play-soft); }
 .stat.win strong { color: var(--play); }
 .stat.loss { background: var(--red-soft); }
-.stat.loss strong { color: var(--red); }
+.stat.loss strong { color: var(--red-ink); }
 
 .history { list-style: none; margin: 0; padding: 0; }
 .history li { display: flex; gap: 0.6rem; align-items: baseline; padding: 0.4rem 0; border-bottom: 1px solid var(--rule); }
@@ -701,10 +709,10 @@ button.cell.announceable:hover { background: var(--red); color: #fff; border-sty
 .history-opp { flex: 1; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-result { font-size: 0.78rem; font-weight: 800; min-width: 4.5rem; text-align: right; }
 .history li.win .history-result { color: var(--play); }
-.history li.loss .history-result { color: var(--red); }
+.history li.loss .history-result { color: var(--red-ink); }
 
 .win-cell { color: var(--play); font-weight: 700; }
-.loss-cell { color: var(--red); font-weight: 700; }
+.loss-cell { color: var(--red-ink); font-weight: 700; }
 
 /* ---------- rules ---------- */
 
@@ -789,4 +797,73 @@ button.cell.announceable:hover { background: var(--red); color: #fff; border-sty
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }
   .die.tumbling, .mini-die.tumbling { animation: none; }
+}
+
+/* ---------- dark theme ----------
+   Follows the device unless the player picks Light or Dark in settings.
+   Declaring it (color-scheme + tokens) also stops phones from auto-darkening
+   the page on their own, which turned panels black and the dice unreadable. */
+
+:root[data-theme="light"] { color-scheme: light; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+  --table: #22403f;
+  --table-deep: #1a3133;
+  --table-ink: #eef4f2;
+  --table-muted: #b2c8c4;
+  --table-line: rgba(255, 255, 255, 0.2);
+
+  --paper: #2e4a4e;
+  --paper-tint: #365459;
+  --rule: #42626a;
+  --rule-strong: #557780;
+  --ink: #eef4f2;
+  --muted: #b2c6c3;
+  --pen: #9dbcff;
+
+  --red: #c9372f;
+  --red-dark: #a82b24;
+  --red-soft: #503236;
+  --red-ink: #ff9d95;
+  --menu-hover-ink: #ffd2ce;
+  --play: #6ad9ae;
+  --play-soft: #24574a;
+  --on-play: #10302a;
+  --brass-soft: #554a2b;
+  --input-bg: #263f43;
+
+  --shadow-panel: 0 1px 0 rgba(0, 0, 0, 0.12), 0 14px 32px -18px rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --table: #22403f;
+  --table-deep: #1a3133;
+  --table-ink: #eef4f2;
+  --table-muted: #b2c8c4;
+  --table-line: rgba(255, 255, 255, 0.2);
+
+  --paper: #2e4a4e;
+  --paper-tint: #365459;
+  --rule: #42626a;
+  --rule-strong: #557780;
+  --ink: #eef4f2;
+  --muted: #b2c6c3;
+  --pen: #9dbcff;
+
+  --red: #c9372f;
+  --red-dark: #a82b24;
+  --red-soft: #503236;
+  --red-ink: #ff9d95;
+  --menu-hover-ink: #ffd2ce;
+  --play: #6ad9ae;
+  --play-soft: #24574a;
+  --on-play: #10302a;
+  --brass-soft: #554a2b;
+  --input-bg: #263f43;
+
+  --shadow-panel: 0 1px 0 rgba(0, 0, 0, 0.12), 0 14px 32px -18px rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
 }
