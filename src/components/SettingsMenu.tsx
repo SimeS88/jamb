@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ThrowMode } from './Game'
 import { useI18n, type Lang } from '../i18n'
+import { saveTheme, storedTheme, type Theme } from '../theme'
 
 interface Props {
   throwMode: ThrowMode
@@ -13,6 +14,7 @@ interface Props {
 export default function SettingsMenu({ throwMode, setThrowMode, signedIn, onSignOut }: Props) {
   const { t, lang, setLang } = useI18n()
   const [open, setOpen] = useState(false)
+  const [theme, setTheme] = useState<Theme>(storedTheme)
   const wrapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -49,6 +51,21 @@ export default function SettingsMenu({ throwMode, setThrowMode, signedIn, onSign
             <select value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
               <option value="hr">Hrvatski</option>
               <option value="en">English</option>
+            </select>
+          </label>
+          <label>
+            {t('theme')}
+            <select
+              value={theme}
+              onChange={(e) => {
+                const v = e.target.value as Theme
+                setTheme(v)
+                saveTheme(v)
+              }}
+            >
+              <option value="auto">{t('themeAuto')}</option>
+              <option value="light">{t('themeLight')}</option>
+              <option value="dark">{t('themeDark')}</option>
             </select>
           </label>
           <label>

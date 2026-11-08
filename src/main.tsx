@@ -5,6 +5,9 @@ import { I18nProvider } from './i18n'
 import '@fontsource-variable/manrope'
 import '@fontsource-variable/bricolage-grotesque'
 import './styles.css'
+import { applyTheme, storedTheme } from './theme'
+
+applyTheme(storedTheme())
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
