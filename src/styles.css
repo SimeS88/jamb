@@ -867,3 +867,170 @@ button.cell.announceable:hover { background: var(--red); color: #fff; border-sty
   --shadow-panel: 0 1px 0 rgba(0, 0, 0, 0.12), 0 14px 32px -18px rgba(0, 0, 0, 0.7);
   color-scheme: dark;
 }
+
+/* ================================================================
+   Christmas edition — only under <html data-xmas>; layers on top of
+   the light/dark themes by retinting the table and the dice.
+   ================================================================ */
+:root[data-xmas] {
+  --table: #1d4a34;
+  --table-deep: #12301f;
+  --pip: #b3261e;
+  --xmas-gold: #e9b949;
+}
+:root[data-xmas] body {
+  background:
+    radial-gradient(140% 900px at 50% 0%, #2a6045 0%, var(--table) 50%, var(--table-deep) 100%)
+    no-repeat var(--table-deep);
+}
+:root[data-xmas] .pip:not(.empty) { background: radial-gradient(circle at 35% 30%, #e0544d 0%, var(--pip) 70%); }
+
+.snowfall {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1;
+}
+:root[data-xmas] .app { position: relative; z-index: 2; }
+
+.xmas-tree {
+  display: inline-block;
+  font-size: 0.8em;
+  transform-origin: bottom center;
+  animation: xmas-sway 3s ease-in-out infinite;
+}
+@keyframes xmas-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+:root[data-xmas] .subtitle { color: #f3d98b; }
+
+.settings-pop label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+}
+.settings-pop label.check input { width: auto; margin: 0; }
+
+/* fairy lights under the header */
+.garland {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  margin: 0.5rem 0.2rem 0;
+  height: 16px;
+}
+.garland::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 2px;
+  height: 8px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.45);
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+}
+.bulb {
+  position: relative;
+  top: 6px;
+  width: 8px;
+  height: 11px;
+  border-radius: 50% 50% 45% 45%;
+  animation: twinkle 1.6s ease-in-out infinite;
+}
+.bulb.b0 { background: #ff4d4d; box-shadow: 0 0 8px #ff4d4d; }
+.bulb.b1 { background: #ffd54d; box-shadow: 0 0 8px #ffd54d; animation-delay: 0.4s; }
+.bulb.b2 { background: #4dd0ff; box-shadow: 0 0 8px #4dd0ff; animation-delay: 0.8s; }
+.bulb.b3 { background: #6dff8a; box-shadow: 0 0 8px #6dff8a; animation-delay: 1.2s; }
+@keyframes twinkle { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* candy-cane strip along the top of each panel */
+:root[data-xmas] :is(.auth-panel, .leaderboard, .menu, .stats-panel, .player-list,
+  .dice-area, .opp-live, .opponent-board) {
+  position: relative;
+  overflow: hidden;
+}
+:root[data-xmas] :is(.auth-panel, .leaderboard, .menu, .stats-panel, .player-list,
+  .dice-area, .opp-live, .opponent-board)::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 6px;
+  background: repeating-linear-gradient(135deg, var(--red) 0 10px, #fff 10px 20px);
+  pointer-events: none;
+}
+
+/* held dice are wrapped like a present */
+:root[data-xmas] .die.held,
+:root[data-xmas] .mini-die.held {
+  position: relative;
+  overflow: visible;
+  background:
+    linear-gradient(90deg, transparent 44%, var(--xmas-gold) 44% 56%, transparent 56%),
+    linear-gradient(0deg, transparent 44%, var(--xmas-gold) 44% 56%, transparent 56%),
+    linear-gradient(160deg, #2f8a58 0%, #1f6b45 100%);
+  border-color: #17533a;
+}
+:root[data-xmas] .die.held .pip:not(.empty),
+:root[data-xmas] .mini-die.held .pip:not(.empty) {
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+:root[data-xmas] .die.held::after {
+  content: '🎀';
+  position: absolute;
+  top: -0.85rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+:root[data-xmas] .sheet .grand th::before { content: '⭐ '; }
+
+/* "Ho ho ho!" burst */
+.festive-burst {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+.festive-text {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 9vw, 4.5rem);
+  font-weight: 800;
+  color: #fff;
+  padding: 0.4em 0.8em;
+  border-radius: 20px;
+  background: rgba(158, 37, 32, 0.94);
+  border: 3px solid var(--xmas-gold);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  animation: festive-pop 2.6s ease forwards;
+}
+.festive-bit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-size: 2rem;
+  animation: festive-fly 1.6s ease-out forwards;
+}
+@keyframes festive-pop {
+  0% { transform: scale(0.3); opacity: 0; }
+  15% { transform: scale(1.1); opacity: 1; }
+  25% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+@keyframes festive-fly {
+  0% { transform: translate(-50%, -50%) rotate(var(--a)) translateY(0) rotate(0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(var(--a)) translateY(calc(-1 * var(--d))) rotate(540deg); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bulb, .xmas-tree { animation: none; }
+}
+
+@media (max-width: 520px) {
+  .bulb { width: 6px; height: 9px; }
+  :root[data-xmas] .die.held::after { font-size: 0.95rem; top: -0.7rem; }
+}

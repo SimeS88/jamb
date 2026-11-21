@@ -11,6 +11,7 @@ import StatsPanel from './components/StatsPanel'
 import { Pips } from './components/DieGlyph'
 import { supabase } from './lib/supabase'
 import { useI18n } from './i18n'
+import { Garland, useChristmas } from './christmas'
 
 type Screen = 'menu' | 'single' | 'multi'
 
@@ -20,6 +21,7 @@ function initialThrowMode(): ThrowMode {
 
 export default function App() {
   const { t } = useI18n()
+  const xmas = useChristmas()
   const [session, setSession] = useState<Session | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [guest, setGuest] = useState(false)
@@ -104,8 +106,11 @@ export default function App() {
               <Pips value={5} />
             </span>
             {t('title')}
+            {xmas.on && <span className="xmas-tree" aria-hidden="true">🎄</span>}
           </h1>
-          {screen === 'menu' && <p className="subtitle">{t('subtitle')}</p>}
+          {screen === 'menu' && (
+            <p className="subtitle">{xmas.on ? t('christmasSub') : t('subtitle')}</p>
+          )}
         </div>
         <SettingsMenu
           throwMode={throwMode}
@@ -118,6 +123,7 @@ export default function App() {
           }}
         />
       </header>
+      {xmas.on && <Garland />}
 
       {banner && (
         <div className="banner" role="status">

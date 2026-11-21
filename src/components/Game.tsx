@@ -4,6 +4,7 @@ import { ROWS, allowedRows, scoreFor, type ColId, type RowId, type Sheet } from 
 import SheetTable from './SheetTable'
 import { Pips } from './DieGlyph'
 import { useI18n } from '../i18n'
+import { celebrateJamb } from '../christmas'
 
 export type ThrowMode = 'manual' | 'automatic'
 
@@ -100,6 +101,21 @@ export default function Game({
     onTurnEvent?.({ values, held, rollsUsed, rolling: false })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, rolling, values.join(''), held.join(''), rollsUsed])
+
+  // Five or more of a kind after a roll: Christmas edition celebrates it.
+  const celebrated = useRef('')
+  useEffect(() => {
+    if (!active || rolling || rollsUsed === 0) return
+    const key = values.join('')
+    if (celebrated.current === key) return
+    const counts = new Map<number, number>()
+    for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1)
+    if (Math.max(0, ...counts.values()) >= 5) {
+      celebrated.current = key
+      celebrateJamb()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, rolling, rollsUsed, values.join('')])
 
   async function doRoll() {
     if (!canRoll) return

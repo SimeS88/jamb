@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ThrowMode } from './Game'
 import { useI18n, type Lang } from '../i18n'
+import { useChristmas } from '../christmas'
 import { saveTheme, storedTheme, type Theme } from '../theme'
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 /** Compact ⚙ popover so options don't take vertical space from the board. */
 export default function SettingsMenu({ throwMode, setThrowMode, signedIn, onSignOut }: Props) {
   const { t, lang, setLang } = useI18n()
+  const xmas = useChristmas()
   const [open, setOpen] = useState(false)
   const [theme, setTheme] = useState<Theme>(storedTheme)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -74,6 +76,10 @@ export default function SettingsMenu({ throwMode, setThrowMode, signedIn, onSign
               <option value="manual">{t('manual')}</option>
               <option value="automatic">{t('automatic')}</option>
             </select>
+          </label>
+          <label className="check">
+            <input type="checkbox" checked={xmas.on} onChange={(e) => xmas.setOn(e.target.checked)} />
+            🎄 {t('christmas')}
           </label>
           {signedIn && (
             <button

@@ -127,6 +127,9 @@ const dict = {
     resWin: 'Pobjeda',
     resLoss: 'Poraz',
     resDraw: 'Neriješeno',
+    christmas: 'Božićno izdanje',
+    christmasSub: 'Božićno izdanje · 6 kockica',
+    hohoho: 'Ho ho ho! Jamb!',
   },
   en: {
     title: 'Jamb',
@@ -252,6 +255,9 @@ const dict = {
     resWin: 'Win',
     resLoss: 'Loss',
     resDraw: 'Draw',
+    christmas: 'Christmas edition',
+    christmasSub: 'Christmas edition · 6 dice',
+    hohoho: 'Ho ho ho! Jamb!',
   },
 } as const
 
